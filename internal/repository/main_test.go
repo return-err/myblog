@@ -83,6 +83,6 @@ func TestMain(m *testing.M) {
 
 func resetTable(t *testing.T) {
 	t.Helper()
-	_, err := testDB.Exec("TRUNCATE TABLE user_profiles, users, posts RESTART IDENTITY CASCADE;")
+	_, err := testDB.Exec("TRUNCATE TABLE user_profiles, users, posts, refresh_tokens RESTART IDENTITY CASCADE;")
 	require.NoError(t, err, "リセットできませんでした")
 }

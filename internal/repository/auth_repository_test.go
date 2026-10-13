@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Rashomon-code/myblog/internal/apperror"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/bcrypt"
@@ -86,6 +87,35 @@ func TestGetUserByUsername(t *testing.T) {
 	})
 }
 
+func TestGetRoleUserID(t *testing.T) {
+	repo := NewAuthRepository(testDB)
+	t.Run("success", func(t *testing.T) {
+		resetTable(t)
+		defer resetTable(t)
+
+		err := initAdmin(testDB)
+		require.NoError(t, err)
+		role, err := repo.GetRoleByUserID(1)
+		require.NoError(t, err)
+		assert.Equal(t, "admin", role)
+
+		err = repo.CreateUserWithProfile("test", "pass")
+		require.NoError(t, err)
+		role, err = repo.GetRoleByUserID(2)
+		require.NoError(t, err)
+		assert.Equal(t, "user", role)
+	})
+
+	t.Run("user not found", func(t *testing.T) {
+		resetTable(t)
+		defer resetTable(t)
+
+		role, err := repo.GetRoleByUserID(1)
+		assert.Error(t, err)
+		assert.Equal(t, "", role)
+	})
+}
+
 func TestSaveRefreshToken(t *testing.T) {
 	repo := NewAuthRepository(testDB)
 	t.Run("success", func(t *testing.T) {
@@ -105,4 +135,138 @@ func TestSaveRefreshToken(t *testing.T) {
 		assert.Equal(t, int64(100), userID)
 		assert.Equal(t, "token", token)
 	})
+}
+
+func TestFindRefreshToken(t *testing.T) {
+	repo := NewAuthRepository(testDB)
+	t.Run("success", func(t *testing.T) {
+		resetTable(t)
+		defer resetTable(t)
+
+		expiresAT := time.Now().Add(24 * time.Hour)
+		err := repo.SaveRefreshToken(100, "token", expiresAT)
+		require.NoError(t, err)
+		err = repo.UseRefreshToken(1)
+		require.NoError(t, err)
+		refreshToken, err := repo.FindRefreshToken("token")
+		require.NoError(t, err)
+
+		assert.Equal(t, 1, refreshToken.ID)
+		assert.Equal(t, int64(100), refreshToken.UserID)
+		assert.Equal(t, true, refreshToken.Revoked)
+	})
+
+	t.Run("token not found", func(t *testing.T) {
+		resetTable(t)
+		defer resetTable(t)
+
+		refreshToken, err := repo.FindRefreshToken("non existent token")
+		assert.Error(t, err)
+		assert.Nil(t, refreshToken)
+	})
+}
+
+func TestUseRefreshToken(t *testing.T) {
+	repo := NewAuthRepository(testDB)
+	t.Run("success", func(t *testing.T) {
+		resetTable(t)
+		defer resetTable(t)
+
+		err := repo.SaveRefreshToken(100, "token", time.Now())
+		require.NoError(t, err)
+		err = repo.UseRefreshToken(1)
+		require.NoError(t, err)
+		refreshToken, err := repo.FindRefreshToken("token")
+		require.NoError(t, err)
+		assert.True(t, refreshToken.Revoked)
+	})
+}
+
+func TestRotateRefreshToken(t *testing.T) {
+	repo := NewAuthRepository(testDB)
+	tests := []struct {
+		name           string
+		oldTokenID     int
+		userID         int64
+		refreshToken   string
+		revoked        bool
+		wantErr        error
+		wantOldRevoked bool
+		wantNewToken   bool
+	}{
+		{
+			name:           "success",
+			oldTokenID:     1,
+			userID:         1,
+			refreshToken:   "new token",
+			wantErr:        nil,
+			wantOldRevoked: true,
+			wantNewToken:   true,
+		},
+		{
+			name:         "failed token already revoked",
+			oldTokenID:   1,
+			userID:       1,
+			refreshToken: "new token",
+			revoked:      true,
+			wantErr:      apperror.ErrRefreshTokenRevoked,
+			wantNewToken: false,
+		},
+		{
+			name:         "failed token not found",
+			oldTokenID:   100,
+			userID:       1,
+			refreshToken: "new token",
+			wantErr:      apperror.ErrRefreshTokenRevoked,
+			wantNewToken: false,
+		},
+		{
+			name:         "failed wrong user",
+			oldTokenID:   1,
+			userID:       100,
+			refreshToken: "new token",
+			wantErr:      apperror.ErrRefreshTokenRevoked,
+			wantNewToken: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resetTable(t)
+			defer resetTable(t)
+			err := repo.SaveRefreshToken(1, "old token", time.Now().Add(10*time.Minute))
+			require.NoError(t, err)
+
+			if tt.revoked {
+				err := repo.UseRefreshToken(1)
+				require.NoError(t, err)
+			}
+
+			err = repo.RotateRefreshToken(tt.oldTokenID, tt.userID, tt.refreshToken, time.Now().Add(10*time.Minute))
+			if tt.wantErr != nil {
+				require.ErrorIs(t, err, tt.wantErr)
+			} else {
+				require.NoError(t, err)
+			}
+
+			_, err = repo.FindRefreshToken(tt.refreshToken)
+			if tt.wantNewToken {
+				require.NoError(t, err)
+			} else {
+				require.Error(t, err)
+			}
+
+			if tt.wantOldRevoked {
+				var revoked bool
+				err := testDB.QueryRow(`
+					SELECT revoked
+					FROM refresh_tokens	
+					WHERE id = $1
+				`, tt.oldTokenID).Scan(&revoked)
+
+				require.NoError(t, err)
+				require.True(t, revoked)
+			}
+		})
+	}
 }
