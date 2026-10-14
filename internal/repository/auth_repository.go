@@ -179,3 +179,12 @@ func (r *AuthRepository) RotateRefreshToken(oldTokenID int, userID int64, refres
 
 	return nil
 }
+
+func (r *AuthRepository) RevokeAllRefreshTokens(userID int64) error {
+	_, err := r.db.Exec(`
+		UPDATE refresh_tokens
+		SET revoked = TRUE	
+		WHERE user_id = $1 AND revoked = FALSE
+	`, userID)
+	return err
+}

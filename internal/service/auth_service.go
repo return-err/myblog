@@ -22,6 +22,7 @@ type AuthRepositoryInterface interface {
 	FindRefreshToken(token string) (*model.RefreshToken, error)
 	GetRoleByUserID(userID int64) (string, error)
 	RotateRefreshToken(oldTokenID int, userID int64, refreshToken string, expiredAt time.Time) error
+	RevokeAllRefreshTokens(userID int64) error
 }
 
 type AuthService struct {
@@ -123,6 +124,14 @@ func (s *AuthService) Refresh(refreshToken string) (*model.TokenPair, error) {
 		AccessToken:  accessToken,
 		RefreshToken: newRefreshToken,
 	}, nil
+}
+
+func (s *AuthService) Logout(userID int64) error {
+	err := s.repo.RevokeAllRefreshTokens(userID)
+	if err != nil {
+		return fmt.Errorf("failed to revoke refesh tokens: %w", err)
+	}
+	return nil
 }
 
 func generateRefreshToken() (string, time.Time, error) {

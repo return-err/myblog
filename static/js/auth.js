@@ -52,3 +52,33 @@ async function apiFetch(url, options = {}) {
 
     return response;
 }
+
+async function logout() {
+    try {
+        const token = localStorage.getItem('token')
+        if (!token) {
+            console.warn("ログインされていません")
+            window.location.href = '/login';
+            return;
+        }
+
+        const response = await fetch('/api/auth/logout', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        const data = await response.json();
+        if (response.ok) {
+            console.log("ログアウトしました:", data.message);
+            localStorage.removeItem('token');
+            window.location.href = '/login';
+        } else {
+            console.error("ログアウトできませんでした:", data.error || response.statusText)
+        }
+    } catch (error) {
+        console.error("予期せぬエラーが発生しました:", error)
+    }
+}

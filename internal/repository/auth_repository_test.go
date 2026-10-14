@@ -284,6 +284,36 @@ func TestRotateRefreshToken(t *testing.T) {
 	}
 }
 
+func TestRevokeAllRefreshTokens(t *testing.T) {
+	repo := NewAuthRepository(testDB)
+	t.Run("success", func(t *testing.T) {
+		resetTable(t)
+		defer resetTable(t)
+
+		err := createTestUser(int64(100), testDB)
+		require.NoError(t, err)
+
+		for i := range 5 {
+			_, err := testDB.Exec(`
+				INSERT INTO refresh_tokens (user_id, token, expires_at)	
+				VALUES ($1, $2, $3)
+			`, 100, fmt.Sprintf("token%d", i), time.Now().Add(10*time.Minute))
+			require.NoError(t, err)
+		}
+
+		err = repo.RevokeAllRefreshTokens(int64(100))
+		require.NoError(t, err)
+
+		var count int
+		err = testDB.QueryRow(`
+			SELECT COUNT (*) FROM refresh_tokens
+			WHERE revoked = FALSE
+		`).Scan(&count)
+		require.NoError(t, err)
+		assert.Equal(t, 0, count)
+	})
+}
+
 func createTestUser(userID int64, db *sql.DB) error {
 	insertSQL := `
 		INSERT INTO users (id, username, password_hash, role)
