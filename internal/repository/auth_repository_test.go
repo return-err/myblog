@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"database/sql"
 	"fmt"
 	"testing"
 	"time"
@@ -122,8 +123,11 @@ func TestSaveRefreshToken(t *testing.T) {
 		resetTable(t)
 		defer resetTable(t)
 
+		err := createTestUser(int64(100), testDB)
+		require.NoError(t, err)
+
 		expiresAT := time.Now().Add(24 * time.Hour)
-		err := repo.SaveRefreshToken(100, "token", expiresAT)
+		err = repo.SaveRefreshToken(100, "token", expiresAT)
 		require.NoError(t, err)
 
 		var userID int64
@@ -143,8 +147,11 @@ func TestFindRefreshToken(t *testing.T) {
 		resetTable(t)
 		defer resetTable(t)
 
+		err := createTestUser(int64(100), testDB)
+		require.NoError(t, err)
+
 		expiresAT := time.Now().Add(24 * time.Hour)
-		err := repo.SaveRefreshToken(100, "token", expiresAT)
+		err = repo.SaveRefreshToken(100, "token", expiresAT)
 		require.NoError(t, err)
 		err = repo.UseRefreshToken(1)
 		require.NoError(t, err)
@@ -172,7 +179,10 @@ func TestUseRefreshToken(t *testing.T) {
 		resetTable(t)
 		defer resetTable(t)
 
-		err := repo.SaveRefreshToken(100, "token", time.Now())
+		err := createTestUser(int64(100), testDB)
+		require.NoError(t, err)
+
+		err = repo.SaveRefreshToken(100, "token", time.Now())
 		require.NoError(t, err)
 		err = repo.UseRefreshToken(1)
 		require.NoError(t, err)
@@ -234,7 +244,10 @@ func TestRotateRefreshToken(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			resetTable(t)
 			defer resetTable(t)
-			err := repo.SaveRefreshToken(1, "old token", time.Now().Add(10*time.Minute))
+
+			err := createTestUser(int64(1), testDB)
+
+			err = repo.SaveRefreshToken(1, "old token", time.Now().Add(10*time.Minute))
 			require.NoError(t, err)
 
 			if tt.revoked {
@@ -269,4 +282,17 @@ func TestRotateRefreshToken(t *testing.T) {
 			}
 		})
 	}
+}
+
+func createTestUser(userID int64, db *sql.DB) error {
+	insertSQL := `
+		INSERT INTO users (id, username, password_hash, role)
+		VALUES ($1, $2, $3, $4)
+	`
+
+	_, err := db.Exec(insertSQL, userID, "test user", "pass", "user")
+	if err != nil {
+		return fmt.Errorf("failed to create test user: %w", err)
+	}
+	return nil
 }

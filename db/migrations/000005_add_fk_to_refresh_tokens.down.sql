@@ -1,0 +1,2 @@
+ALTER TABLE refresh_tokens
+DROP CONSTRAINT fk_user_refresh_tokens;
