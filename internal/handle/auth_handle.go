@@ -65,6 +65,10 @@ func (a *AuthHandle) Refresh(c *gin.Context) {
 	}
 
 	token, err := a.authService.Refresh(refreshToken)
+	if err != nil {
+		RespondWithError(c, err)
+		return
+	}
 
 	c.SetCookie("refresh_token", token.RefreshToken, 7*24*3600, "/api/auth/refresh", "", false, true)
 	c.JSON(http.StatusOK, gin.H{"token": token.AccessToken})

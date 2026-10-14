@@ -23,7 +23,8 @@ func RespondWithError(c *gin.Context, err error) {
 
 	// 401
 	if errors.Is(err, apperror.ErrInvalidCredentials) ||
-		errors.Is(err, apperror.ErrUnauthorized) {
+		errors.Is(err, apperror.ErrUnauthorized) ||
+		errors.Is(err, apperror.ErrInvalidRefreshToken) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
