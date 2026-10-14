@@ -298,3 +298,74 @@ func TestRefresh(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateUsername(t *testing.T) {
+	tests := []struct {
+		name     string
+		username string
+		wantErr  error
+	}{
+		{
+			name:     "success",
+			username: "test_user",
+			wantErr:  nil,
+		},
+		{
+			name:     "username has space",
+			username: "test user",
+			wantErr:  apperror.ErrUsernameContainsSpace,
+		},
+		{
+			name:     "invalid length",
+			username: "this_is_a_invalid_username",
+			wantErr:  apperror.ErrUsernameInvalidLength,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateUsername(tt.username)
+			if err != tt.wantErr {
+				t.Errorf("expected %q, got %q", tt.wantErr, err)
+			}
+		})
+	}
+}
+
+func TestValidatePassword(t *testing.T) {
+	tests := []struct {
+		name     string
+		password string
+		wantErr  error
+	}{
+		{
+			name:     "success",
+			password: "testpass1",
+			wantErr:  nil,
+		},
+		{
+			name:     "missing digit",
+			password: "testpass",
+			wantErr:  apperror.ErrPasswordWeak,
+		},
+		{
+			name:     "missing letter",
+			password: "12345678",
+			wantErr:  apperror.ErrPasswordWeak,
+		},
+		{
+			name:     "invalid length",
+			password: "test123",
+			wantErr:  apperror.ErrPasswordInvalidLength,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validatePassword(tt.password)
+			if err != tt.wantErr {
+				t.Errorf("expected %q, got %q", tt.wantErr, err)
+			}
+		})
+	}
+}

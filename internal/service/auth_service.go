@@ -33,30 +33,11 @@ func NewAuthService(repo AuthRepositoryInterface, jwt *JWTService) *AuthService 
 	return &AuthService{repo: repo, jwt: jwt}
 }
 
-// 正規表現で制限する方法
-// var usernameRegex = regexp.MustCompile(`^[a-zA-Z0-9_]{3,20}$`)
-// func validateUsernameFormat(username string) error {
-// 	if !usernameRegex.MatchString(username) {
-// 		return errors.New("Format error")
-// 	}
-// 	return nil
-// }
-
-func validateUsername(username string) error {
-	if len(username) < 3 || len(username) > 20 {
-		return apperror.ErrUsernameInvalidLength
-	}
-
-	if strings.IndexFunc(username, unicode.IsSpace) != -1 {
-		return apperror.ErrUsernameContainsSpace
-	}
-
-	return nil
-}
-
 func (s *AuthService) Register(username, password string) error {
-	err := validateUsername(username)
-	if err != nil {
+	if err := validateUsername(username); err != nil {
+		return err
+	}
+	if err := validatePassword(password); err != nil {
 		return err
 	}
 
@@ -152,4 +133,48 @@ func generateRefreshToken() (string, time.Time, error) {
 	}
 
 	return hex.EncodeToString(bytes), time.Now().Add(7 * 24 * time.Hour), nil
+}
+
+// 正規表現で制限する方法
+// var usernameRegex = regexp.MustCompile(`^[a-zA-Z0-9_]{3,20}$`)
+// func validateUsernameFormat(username string) error {
+// 	if !usernameRegex.MatchString(username) {
+// 		return errors.New("Format error")
+// 	}
+// 	return nil
+// }
+
+func validateUsername(username string) error {
+	if len(username) < 3 || len(username) > 20 {
+		return apperror.ErrUsernameInvalidLength
+	}
+
+	if strings.IndexFunc(username, unicode.IsSpace) != -1 {
+		return apperror.ErrUsernameContainsSpace
+	}
+
+	return nil
+}
+
+func validatePassword(password string) error {
+	if len(password) < 8 || len(password) > 72 {
+		return apperror.ErrPasswordInvalidLength
+	}
+
+	hasLetter := false
+	hasDigit := false
+
+	for _, ch := range password {
+		if unicode.IsLetter(ch) {
+			hasLetter = true
+		}
+		if unicode.IsDigit(ch) {
+			hasDigit = true
+		}
+	}
+
+	if hasLetter && hasDigit {
+		return nil
+	}
+	return apperror.ErrPasswordWeak
 }
