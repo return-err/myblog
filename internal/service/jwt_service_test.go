@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Rashomon-code/myblog/internal/model"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/return-err/myblog/internal/model"
 )
 
 func TestGenerateToken_Success(t *testing.T) {

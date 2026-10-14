@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/Rashomon-code/myblog/internal/service"
 	"github.com/gin-gonic/gin"
+	"github.com/return-err/myblog/internal/service"
 )
 
 type Middleware struct {

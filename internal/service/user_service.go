@@ -1,8 +1,8 @@
 package service
 
 import (
-	"github.com/Rashomon-code/myblog/internal/apperror"
-	"github.com/Rashomon-code/myblog/internal/model"
+	"github.com/return-err/myblog/internal/apperror"
+	"github.com/return-err/myblog/internal/model"
 )
 
 type UserService struct {

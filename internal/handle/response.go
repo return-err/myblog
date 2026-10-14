@@ -5,8 +5,8 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/Rashomon-code/myblog/internal/apperror"
 	"github.com/gin-gonic/gin"
+	"github.com/return-err/myblog/internal/apperror"
 )
 
 func RespondWithError(c *gin.Context, err error) {

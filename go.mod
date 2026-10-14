@@ -1,4 +1,4 @@
-module github.com/Rashomon-code/myblog
+module github.com/return-err/myblog
 
 go 1.26
 

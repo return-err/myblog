@@ -1,9 +1,9 @@
 package router
 
 import (
-	"github.com/Rashomon-code/myblog/internal/handle"
-	"github.com/Rashomon-code/myblog/internal/middleware"
 	"github.com/gin-gonic/gin"
+	"github.com/return-err/myblog/internal/handle"
+	"github.com/return-err/myblog/internal/middleware"
 )
 
 func SetupRouter(authHandle *handle.AuthHandle, postHandle *handle.PostHandle, mw *middleware.Middleware, userHandle *handle.UserHandle) *gin.Engine {

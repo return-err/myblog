@@ -5,8 +5,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/Rashomon-code/myblog/internal/service"
 	"github.com/gin-gonic/gin"
+	"github.com/return-err/myblog/internal/service"
 	"github.com/stretchr/testify/assert"
 )
 

@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Rashomon-code/myblog/internal/apperror"
-	"github.com/Rashomon-code/myblog/internal/model"
+	"github.com/return-err/myblog/internal/apperror"
+	"github.com/return-err/myblog/internal/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/bcrypt"
@@ -59,7 +59,7 @@ func TestRegister(t *testing.T) {
 		{
 			name:     "success",
 			username: "testuser",
-			password: "123456",
+			password: "test123456",
 			mockCreateUserFn: func(username, passwordHash string) error {
 				return nil
 			},
@@ -68,21 +68,21 @@ func TestRegister(t *testing.T) {
 		{
 			name:             "invalid username space",
 			username:         " wrong ",
-			password:         "123456",
+			password:         "test123456",
 			mockCreateUserFn: nil,
 			wantErr:          apperror.ErrUsernameContainsSpace,
 		},
 		{
 			name:             "invalid username",
 			username:         "wr",
-			password:         "123456",
+			password:         "test123456",
 			mockCreateUserFn: nil,
 			wantErr:          apperror.ErrUsernameInvalidLength,
 		},
 		{
 			name:     "repository error",
 			username: "testuser",
-			password: "123456",
+			password: "test123456",
 			mockCreateUserFn: func(username, passwordHash string) error {
 				return apperror.ErrDatabase
 			},
