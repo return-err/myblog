@@ -12,9 +12,10 @@ type LoginRequest struct {
 }
 
 type Claims struct {
-	UserID               int64  `json:"user_id"`
-	Role                 string `json:"role"`
-	jwt.RegisteredClaims        //匿名フィールド メリット：埋め込み構造体のすべてのフィールドとメソッドを自動的に引き継ぐことができる。
+	Role         string `json:"role"`
+	TokenVersion int    `json:"token_version"`
+
+	jwt.RegisteredClaims // 匿名フィールド メリット：埋め込み構造体のすべてのフィールドとメソッドを自動的に引き継ぐことができる。
 }
 
 type TokenPair struct {

@@ -16,6 +16,7 @@ type User struct {
 	Username     string `json:"username" db:"username"`
 	PasswordHash string `json:"-" db:"password_hash"`
 	Role         string `json:"role" db:"role"`
+	TokenVersion int    `json:"token_version" db:"token_version"`
 }
 
 type UpdateRoleRequest struct {

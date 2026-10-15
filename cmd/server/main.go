@@ -28,7 +28,7 @@ func main() {
 	authRepo := repository.NewAuthRepository(db)
 	authService := service.NewAuthService(authRepo, jwtService)
 	authHandle := handle.NewAuthHandle(authService)
-	middleware := middleware.NewMiddleware(jwtService)
+	middleware := middleware.NewMiddleware(jwtService, authRepo)
 
 	postRepo := repository.NewPostRepository(db)
 	postService := service.NewPostService(postRepo)

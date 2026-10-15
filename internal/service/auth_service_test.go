@@ -3,6 +3,7 @@ package service
 import (
 	"database/sql"
 	"errors"
+	"strconv"
 	"testing"
 	"time"
 
@@ -18,6 +19,7 @@ type mockAuthRepository struct {
 
 	createUserFn         func(username, passwordHash string) error
 	getUserFn            func(username string) (*model.User, error)
+	getTokenVersionFn    func(userID int64) (int, error)
 	saveTokenFn          func(userID int64, refreshToken string, expiresAt time.Time) error
 	findTokenFn          func(token string) (*model.RefreshToken, error)
 	getRoleFn            func(userID int64) (string, error)
@@ -30,6 +32,10 @@ func (r *mockAuthRepository) CreateUserWithProfile(username, passwordHash string
 
 func (r *mockAuthRepository) GetUserByUsername(username string) (*model.User, error) {
 	return r.getUserFn(username)
+}
+
+func (r *mockAuthRepository) GetTokenVersionByUserID(userID int64) (int, error) {
+	return r.getTokenVersionFn(userID)
 }
 
 func (r *mockAuthRepository) SaveRefreshToken(userID int64, refreshToken string, expiresAt time.Time) error {
@@ -189,6 +195,7 @@ func TestRefresh(t *testing.T) {
 		oldRefreshToken      string
 		findTokenFn          func(token string) (*model.RefreshToken, error)
 		getRoleFn            func(userID int64) (string, error)
+		getTokenVersionFn    func(userID int64) (int, error)
 		rotateRefreshTokenFn func(oldTokenID int, userID int64, refreshToken string, expiredAt time.Time) error
 		wantErr              error
 	}{
@@ -209,6 +216,12 @@ func TestRefresh(t *testing.T) {
 			},
 			getRoleFn: func(userID int64) (string, error) {
 				return "user", nil
+			},
+			getTokenVersionFn: func(userID int64) (int, error) {
+				if userID != int64(100) {
+					return 0, apperror.ErrUserNotFound
+				}
+				return 1, nil
 			},
 			rotateRefreshTokenFn: func(oldTokenID int, userID int64, refreshToken string, expiredAt time.Time) error {
 				require.Equal(t, 1, oldTokenID)
@@ -279,6 +292,7 @@ func TestRefresh(t *testing.T) {
 			r := &mockAuthRepository{
 				findTokenFn:          tt.findTokenFn,
 				getRoleFn:            tt.getRoleFn,
+				getTokenVersionFn:    tt.getTokenVersionFn,
 				rotateRefreshTokenFn: tt.rotateRefreshTokenFn,
 			}
 			jwtService := NewJWTService("test")
@@ -292,8 +306,11 @@ func TestRefresh(t *testing.T) {
 			} else {
 				claims, err := mockS.jwt.ParseToken(tokenPair.AccessToken)
 				require.NoError(t, err)
-				assert.Equal(t, int64(100), claims.UserID)
+				userID, err := strconv.ParseInt(claims.Subject, 10, 64)
+				require.NoError(t, err)
+				assert.Equal(t, int64(100), userID)
 				assert.Equal(t, "user", claims.Role)
+				assert.Equal(t, 1, claims.TokenVersion)
 			}
 		})
 	}
