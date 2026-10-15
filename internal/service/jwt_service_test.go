@@ -4,14 +4,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Rashomon-code/myblog/internal/model"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/return-err/myblog/internal/model"
 )
 
 func TestGenerateToken_Success(t *testing.T) {
 	jwtService := NewJWTService("test")
 
-	tokenString, err := jwtService.GenerateToken("user", int64(100), "admin")
+	tokenString, err := jwtService.GenerateToken(int64(100), "admin")
 	if err != nil {
 		t.Fatalf("expected no err, got %v", err)
 	}
@@ -23,7 +23,7 @@ func TestGenerateToken_Success(t *testing.T) {
 
 func TestParseToken_Success(t *testing.T) {
 	jwtService := NewJWTService("test")
-	tokenString, err := jwtService.GenerateToken("user", int64(100), "admin")
+	tokenString, err := jwtService.GenerateToken(int64(100), "admin")
 	if err != nil {
 		t.Fatalf("expected no err, got %v", err)
 	}
@@ -33,9 +33,6 @@ func TestParseToken_Success(t *testing.T) {
 		t.Fatalf("expected no err, got %v", err)
 	}
 
-	if parsedClaims.Username != "user" {
-		t.Errorf("expected Username %q, got %q", "user", parsedClaims.Username)
-	}
 	if parsedClaims.UserID != 100 {
 		t.Errorf("expected UserID %d, got %d", 100, parsedClaims.UserID)
 	}
@@ -46,7 +43,7 @@ func TestParseToken_Success(t *testing.T) {
 
 func TestParseToken_InvalidSecret(t *testing.T) {
 	jwtService := NewJWTService("correct")
-	tokenString, _ := jwtService.GenerateToken("user", int64(100), "admin")
+	tokenString, _ := jwtService.GenerateToken(int64(100), "admin")
 
 	wrongService := NewJWTService("wrong")
 	_, err := wrongService.ParseToken(tokenString)
@@ -57,9 +54,8 @@ func TestParseToken_InvalidSecret(t *testing.T) {
 
 func TestParseToken_Expired(t *testing.T) {
 	expiredClaims := model.Claims{
-		UserID:   int64(100),
-		Username: "user",
-		Role:     "admin",
+		UserID: int64(100),
+		Role:   "admin",
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(-1 * time.Hour)),
 		},

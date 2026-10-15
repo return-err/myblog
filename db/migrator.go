@@ -30,7 +30,7 @@ func RunMigrations(db *sql.DB) error {
 	}
 
 	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
-		return fmt.Errorf("filed to run database migration up: %w", err)
+		return fmt.Errorf("failed to run database migration up: %w", err)
 	}
 	return nil
 }

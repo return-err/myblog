@@ -4,6 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <title>My Blog</title>
+    <script src="/static/js/auth.js"></script>
 
     <style>
         body {
@@ -50,180 +51,176 @@
 
 <body>
 
-<h1>My Blog</h1>
+    <h1>My Blog</h1>
 
-<p id="status">ログインしてください</p>
+    <p id="status">ログインしてください</p>
 
-<div id="menu">
-    <button onclick="goLogin()">Login</button>
-    <button onclick="goRegister()">Register</button>
-</div>
+    <div id="menu">
+        <button onclick="goLogin()">Login</button>
+        <button onclick="goRegister()">Register</button>
+    </div>
 
-<div id="search-box">
-    <input type="text" id="searchInput" placeholder="記事のタイトルを検索..." onkeypress="handleKeyPress(event)">
-    <button onclick="searchPosts()">検索</button>
-</div>
+    <div id="search-box">
+        <input type="text" id="searchInput" placeholder="記事のタイトルを検索..." onkeypress="handleKeyPress(event)">
+        <button onclick="searchPosts()">検索</button>
+    </div>
 
-<h2 class="section-title" id="section-title">最新記事</h2>
-<div id="posts-container">
-    <p>ロード中</p>
-</div>
+    <h2 class="section-title" id="section-title">最新記事</h2>
+    <div id="posts-container">
+        <p>ロード中</p>
+    </div>
 
-<div id="pagination">
-    <button id="btn-prev" onclick="changePage(-1)">前へ</button>
-    <span id="page-info">1 / 1 ページ</span>
-    <button id="btn-next" onclick="changePage(1)">次へ</button>
-</div>
+    <div id="pagination">
+        <button id="btn-prev" onclick="changePage(-1)">前へ</button>
+        <span id="page-info">1 / 1 ページ</span>
+        <button id="btn-next" onclick="changePage(1)">次へ</button>
+    </div>
 
-<script>
+    <script>
 
-function goLogin() { location.href = "/login"; }
-function goRegister() { location.href = "/register"; }
-function goPost() { location.href = "/create"; }
-function logout() { localStorage.removeItem("token"); location.reload(); }
-function goAdmin(){ location.href = "/admin/users"; }
+        function goLogin() { location.href = "/login"; }
+        function goRegister() { location.href = "/register"; }
+        function goPost() { location.href = "/create"; }
+        function goAdmin() { location.href = "/admin/users"; }
 
-async function goMypage() {
-    try {
-        const response = await fetch("/api/me", {
-            headers: {
-                "Authorization": "Bearer " + token
+        async function goMypage() {
+            try {
+                const response = await apiFetch("/api/me");
+                if (!response.ok) {
+                    throw new Error("ユーザー情報が取得できませんでした");
+                }
+
+                const user = await response.json();
+                location.href = `/users/${user.user_id}`;
+            } catch (error) {
+                alert(error.message);
             }
-        });
-        if(!response.ok) {
-            throw new Error("ユーザー情報が取得できませんでした");
         }
 
-        const user = await response.json();
-        location.href = `/users/${user.user_id}`;
-    } catch(error) {
-        alert(error.message);
-    }
-}
+        function escapeHTML(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
 
-function escapeHTML(str) {
-    if (!str) return '';
-    return String(str)
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-}
+        const token = localStorage.getItem("token");
 
-const token = localStorage.getItem("token");
+        if (token) {
+            document.getElementById("status").textContent = "お帰りなさい";
 
-if (token) {
-    document.getElementById("status").textContent = "お帰りなさい";
-
-    let menuHTML = `
+            let menuHTML = `
         <button onclick="goPost()">Create Post</button>
         <button onclick="goMypage()">My Page</button>
         <button onclick="logout()">Logout</button>
     `;
-    try {
-        const payloadBase64 = token.split('.')[1];
-        const decodedPayload = JSON.parse(atob(payloadBase64));
+            try {
+                const payloadBase64 = token.split('.')[1];
+                const decodedPayload = JSON.parse(atob(payloadBase64));
 
-        if (decodedPayload.role === "admin") {
-            menuHTML += `<button onclick="goAdmin()">Admin Menu</button>`;
+                if (decodedPayload.role === "admin") {
+                    menuHTML += `<button onclick="goAdmin()">Admin Menu</button>`;
+                }
+            } catch (e) {
+                console.error("Token 解析失敗", e);
+            }
+
+            document.getElementById("menu").innerHTML = menuHTML;
         }
-    } catch (e) {
-        console.error("Token 解析失敗", e);
-    }
 
-    document.getElementById("menu").innerHTML = menuHTML;
-}
+        let currentPage = 1;
+        const pageSize = 20;
+        let totalPages = 1;
 
-let currentPage = 1;
-const pageSize = 20;
-let totalPages = 1;
+        function renderPosts(posts) {
+            const container = document.getElementById("posts-container");
+            container.innerHTML = "";
 
-function renderPosts(posts) {
-    const container = document.getElementById("posts-container");
-    container.innerHTML = "";
+            if (!posts || posts.length === 0) {
+                container.innerHTML = "<p>該当する記事が見つかりませんでした。</p>";
+                return;
+            }
 
-    if (!posts || posts.length === 0) {
-        container.innerHTML = "<p>該当する記事が見つかりませんでした。</p>";
-        return;
-    }
+            posts.forEach(post => {
+                const postElement = document.createElement("article");
+                postElement.className = "post-card";
 
-    posts.forEach(post => {
-        const postElement = document.createElement("article");
-        postElement.className = "post-card";
-
-        postElement.innerHTML = `
+                postElement.innerHTML = `
             <h3>
                 <a href="/posts/${escapeHTML(post.id)}">${escapeHTML(post.title)}</a>
             </h3>
         `;
 
-        container.appendChild(postElement);
-    });
-}
+                container.appendChild(postElement);
+            });
+        }
 
-function renderPagination(totalCount, page) {
-    totalPages = Math.ceil(totalCount / pageSize) || 1;
-    currentPage = page;
+        function renderPagination(totalCount, page) {
+            totalPages = Math.ceil(totalCount / pageSize) || 1;
+            currentPage = page;
 
-    document.getElementById("page-info").textContent = `${currentPage} / ${totalPages} ページ`;
-    document.getElementById("btn-prev").disabled = (currentPage <= 1);
-    document.getElementById("btn-next").disabled = (currentPage >= totalPages);
-}
+            document.getElementById("page-info").textContent = `${currentPage} / ${totalPages} ページ`;
+            document.getElementById("btn-prev").disabled = (currentPage <= 1);
+            document.getElementById("btn-next").disabled = (currentPage >= totalPages);
+        }
 
-async function loadPosts(page = 1) {
-    try {
-        const response = await fetch(`/api/posts?page=${page}&page_size=${pageSize}`);
-        const data = await response.json();
-        renderPosts(data.posts || []);
-        renderPagination(data.total_count, data.page);
-    } catch (e) {
-        document.getElementById("posts-container").textContent = "記事の取得に失敗しました。";
-    }
-}
+        async function loadPosts(page = 1) {
+            try {
+                const response = await fetch(`/api/posts?page=${page}&page_size=${pageSize}`);
+                const data = await response.json();
+                renderPosts(data.posts || []);
+                renderPagination(data.total_count, data.page);
+            } catch (e) {
+                document.getElementById("posts-container").textContent = "記事の取得に失敗しました。";
+            }
+        }
 
-function changePage(delta) {
-    const newPage = currentPage + delta;
+        function changePage(delta) {
+            const newPage = currentPage + delta;
 
-    if (newPage >= 1 && newPage <= totalPages) {
-        loadPosts(newPage);
-    }
-}
+            if (newPage >= 1 && newPage <= totalPages) {
+                loadPosts(newPage);
+            }
+        }
 
-async function searchPosts() {
-    const query = document.getElementById("searchInput").value.trim();
-    const sectionTitle = document.getElementById("section-title");
+        async function searchPosts() {
+            const query = document.getElementById("searchInput").value.trim();
+            const sectionTitle = document.getElementById("section-title");
 
-    if (!query) {
-        sectionTitle.textContent = "最新記事";
-        loadPosts();
-        return;
-    }
+            if (!query) {
+                sectionTitle.textContent = "最新記事";
+                loadPosts();
+                return;
+            }
 
-    sectionTitle.textContent = `「${escapeHTML(query)}」の検索結果`;
-    document.getElementById("posts-container").innerHTML = "<p>検索中...</p>";
+            sectionTitle.textContent = `「${escapeHTML(query)}」の検索結果`;
+            document.getElementById("posts-container").innerHTML = "<p>検索中...</p>";
 
-    try {
-        const response = await fetch(`/api/posts/search?keyword=${encodeURIComponent(query)}`);
-        
-        if (!response.ok) throw new Error("検索エラー");
+            try {
+                const response = await fetch(`/api/posts/search?keyword=${encodeURIComponent(query)}`);
 
-        const posts = await response.json();
-        renderPosts(posts);
-    } catch (e) {
-        document.getElementById("posts-container").textContent = "検索処理に失敗しました。";
-    }
-}
+                if (!response.ok) throw new Error("検索エラー");
 
-function handleKeyPress(event) {
-    if (event.key === "Enter") {
-        searchPosts();
-    }
-}
+                const posts = await response.json();
+                renderPosts(posts);
+            } catch (e) {
+                document.getElementById("posts-container").textContent = "検索処理に失敗しました。";
+            }
+        }
 
-loadPosts(1);
+        function handleKeyPress(event) {
+            if (event.key === "Enter") {
+                searchPosts();
+            }
+        }
 
-</script>
+        loadPosts(1);
+
+    </script>
 
 </body>
+
 </html>

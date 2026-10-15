@@ -25,64 +25,58 @@
 
 <body>
 
-<h1>ログイン</h1>
+    <h1>ログイン</h1>
 
-<form id="loginForm">
+    <form id="loginForm">
 
-    <p>Username</p>
-    <input type="text" id="username">
+        <p>Username</p>
+        <input type="text" id="username">
 
-    <p>Password</p>
-    <input type="password" id="password">
+        <p>Password</p>
+        <input type="password" id="password">
 
-    <button type="submit">ログインします</button>
+        <button type="submit">ログインします</button>
 
-</form>
+    </form>
 
-<p>
-    アカウントお持ちでないですか?
-    <a href="/register">登録</a>
-</p>
+    <p>
+        アカウントお持ちでないですか?
+        <a href="/register">登録</a>
+    </p>
 
-<script>
+    <script>
 
-document.getElementById("loginForm").addEventListener("submit", async function(e){
+        document.getElementById("loginForm").addEventListener("submit", async function (e) {
+            e.preventDefault();
 
-    e.preventDefault();
+            const username = document.getElementById("username").value;
+            const password = document.getElementById("password").value;
 
-    const username = document.getElementById("username").value;
-    const password = document.getElementById("password").value;
+            const response = await fetch("/api/auth/login", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    username,
+                    password
+                })
+            });
 
-    const response = await fetch("/api/auth/login",{
-        method:"POST",
-        headers:{
-            "Content-Type":"application/json"
-        },
-        body:JSON.stringify({
-            username,
-            password
-        })
-    });
+            const result = await response.json();
 
-    const result = await response.json();
+            if (response.ok) {
+                localStorage.setItem("token", result.token);
+                alert("ログインしました");
+                location.href = "/";
+            } else {
+                alert(result.error || "Login Failed");
+            }
 
-    if(response.ok){
+        });
 
-        localStorage.setItem("token", result.token);
-
-        alert("ログインしました");
-
-        location.href = "/";
-
-    }else{
-
-        alert(result.error || "Login Failed");
-
-    }
-
-});
-
-</script>
+    </script>
 
 </body>
+
 </html>

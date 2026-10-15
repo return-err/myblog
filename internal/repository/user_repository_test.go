@@ -3,7 +3,7 @@ package repository
 import (
 	"testing"
 
-	"github.com/Rashomon-code/myblog/internal/model"
+	"github.com/return-err/myblog/internal/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

@@ -5,9 +5,9 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/Rashomon-code/myblog/internal/apperror"
-	"github.com/Rashomon-code/myblog/internal/model"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/return-err/myblog/internal/apperror"
+	"github.com/return-err/myblog/internal/model"
 )
 
 type UserRepository struct {

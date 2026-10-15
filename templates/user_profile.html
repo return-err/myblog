@@ -4,6 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <title>User Profile - My Blog</title>
+    <script src="/static/js/auth.js"></script>
 
     <style>
         body {
@@ -37,169 +38,163 @@
 
 <body>
 
-<h1>User Profile</h1>
+    <h1>User Profile</h1>
 
-<p id="status">読み込み中...</p>
+    <p id="status">読み込み中...</p>
 
-<div id="content" class="hidden">
+    <div id="content" class="hidden">
 
-    <div class="profile-card">
-        <div id="profile-view">
-            <p><strong>ユーザー名:</strong> <span id="displayNameView"></span></p>
-            <p><strong>Bio：</strong> <span id="bioView"></span></p>
-            <button id="editProfileButton" class="hidden" onclick="toggleEdit(true)">プロフィールを編集</button>
+        <div class="profile-card">
+            <div id="profile-view">
+                <p><strong>ユーザー名:</strong> <span id="displayNameView"></span></p>
+                <p><strong>Bio：</strong> <span id="bioView"></span></p>
+                <button id="editProfileButton" class="hidden" onclick="toggleEdit(true)">プロフィールを編集</button>
+            </div>
+
+            <div id="profile-edit" class="hidden">
+                <p><label>Display Name:<br><input id="displayNameInput"></label></p>
+                <p><label>Bio:<br><textarea id="bioInput"></textarea></label></p>
+                <button onclick="updateProfile()">保存</button>
+                <button onclick="toggleEdit(false)">キャンセル</button>
+            </div>
         </div>
 
-        <div id="profile-edit" class="hidden">
-            <p><label>Display Name:<br><input id="displayNameInput"></label></p>
-            <p><label>Bio:<br><textarea id="bioInput"></textarea></label></p>
-            <button onclick="updateProfile()">保存</button>
-            <button onclick="toggleEdit(false)">キャンセル</button>
+        <p>使用者 ID: <span id="userIdView"></span></p>
+
+        <div class="post-list">
+            <h3>投稿</h3>
+            <ul id="postsContainer"></ul>
+
+            <div id="pagination">
+                <button id="btn-prev" onclick="changePage(-1)">前へ</button>
+                <span id="page-info">1 / 1 ページ</span>
+                <button id="btn-next" onclick="changePage(1)">次へ</button>
+            </div>
         </div>
+
     </div>
 
-    <p>使用者 ID: <span id="userIdView"></span></p>
-
-    <div class="post-list">
-        <h3>投稿</h3>
-        <ul id="postsContainer"></ul>
-
-        <div id="pagination">
-            <button id="btn-prev" onclick="changePage(-1)">前へ</button>
-            <span id="page-info">1 / 1 ページ</span>
-            <button id="btn-next" onclick="changePage(1)">次へ</button>
-        </div>
+    <div id="menu">
+        <button onclick="goHome()">Home</button>
+        <button onclick="logout()">Logout</button>
     </div>
 
-</div>
+    <script>
 
-<div id="menu">
-    <button onclick="goHome()">Home</button>
-    <button onclick="logout()">Logout</button>
-</div>
+        const token = localStorage.getItem("token");
+        const userID = location.pathname.split("/").pop();
 
-<script>
+        function escapeHTML(str) {
+            if (!str) return '';
 
-const token = localStorage.getItem("token");
-const userID = location.pathname.split("/").pop();
-
-function escapeHTML(str) {
-    if (!str) return '';
-
-    return String(str)
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-}
-
-function logout() {
-    localStorage.removeItem("token");
-    location.href = "/";
-}
-
-function goHome() {
-    location.href = "/";
-}
-
-function toggleEdit(isEditing) {
-    if (isEditing) {
-        document.getElementById("displayNameInput").value = document.getElementById("displayNameView").textContent;
-        document.getElementById("bioInput").value = document.getElementById("bioView").textContent;
-        document.getElementById("profile-view").classList.add("hidden");
-        document.getElementById("profile-edit").classList.remove("hidden");
-    } else {
-        document.getElementById("profile-view").classList.remove("hidden");
-        document.getElementById("profile-edit").classList.add("hidden");
-    }
-}
-
-async function updateProfile() {
-    const displayName = document.getElementById("displayNameInput").value;
-    const bio = document.getElementById("bioInput").value;
-
-    try {
-        const response = await fetch("/api/me/profile", {
-            method: "PUT",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": "Bearer " + token
-            },
-            body: JSON.stringify({ display_name: displayName, bio: bio })
-        });
-
-        if (!response.ok) {
-            const data = await response.json();
-            alert(data.error || "更新失敗");
-            return;
+            return String(str)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
         }
 
-        document.getElementById("displayNameView").textContent = displayName;
-        document.getElementById("bioView").textContent = bio;
-        toggleEdit(false);
-        alert("更新しました");
-    } catch (e) {
-        alert("通信エラー");
-    }
-}
-
-let currentPage = 1;
-const pageSize = 5;
-let totalPages = 1;
-
-function renderPagination(totalCount, page) {
-    totalPages = Math.ceil(totalCount / pageSize) || 1;
-    currentPage = page;
-
-    document.getElementById("page-info").textContent = `${currentPage} / ${totalPages} ページ`;
-    document.getElementById("btn-prev").disabled = (currentPage <= 1);
-    document.getElementById("btn-next").disabled = (currentPage >= totalPages);
-}
-
-function changePage(delta) {
-    const newPage = currentPage + delta;
-    if (newPage >= 1 && newPage <= totalPages) {
-        loadUserPosts(newPage);
-    }
-}
-
-function formaiDate(dateString) {
-    if (!dateString) return '';
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat('ja-JP',{
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit'
-    }).format(date);
-}
-
-async function loadUserPosts(page = 1) {
-    try {
-        const headers = {};
-        if (token) {
-            headers["Authorization"] = "Bearer " + token;
+        function goHome() {
+            location.href = "/";
         }
 
-        const response = await fetch(
-            `/api/users/${encodeURIComponent(userID)}/posts?page=${page}&page_size=${pageSize}`,
-            { headers: headers }
-        );
-
-        if (!response.ok) {
-            throw new Error("記事が取得できませんでした");
+        function toggleEdit(isEditing) {
+            if (isEditing) {
+                document.getElementById("displayNameInput").value = document.getElementById("displayNameView").textContent;
+                document.getElementById("bioInput").value = document.getElementById("bioView").textContent;
+                document.getElementById("profile-view").classList.add("hidden");
+                document.getElementById("profile-edit").classList.remove("hidden");
+            } else {
+                document.getElementById("profile-view").classList.remove("hidden");
+                document.getElementById("profile-edit").classList.add("hidden");
+            }
         }
 
-        const data = await response.json();
-        const posts = data.posts || [];
-        const postsContainer = document.getElementById("postsContainer");
+        async function updateProfile() {
+            const displayName = document.getElementById("displayNameInput").value;
+            const bio = document.getElementById("bioInput").value;
 
-        if (posts.length === 0) {
-            postsContainer.innerHTML = "<li>まだ投稿はありません。</li>";
-        } else {
-            postsContainer.innerHTML = posts.map(post => `
+            try {
+                const response = await apiFetch("/api/me/profile", {
+                    method: "PUT",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ display_name: displayName, bio: bio })
+                });
+
+                if (!response.ok) {
+                    const data = await response.json();
+                    alert(data.error || "更新失敗");
+                    return;
+                }
+
+                document.getElementById("displayNameView").textContent = displayName;
+                document.getElementById("bioView").textContent = bio;
+                toggleEdit(false);
+                alert("更新しました");
+            } catch (e) {
+                alert("通信エラー");
+            }
+        }
+
+        let currentPage = 1;
+        const pageSize = 5;
+        let totalPages = 1;
+
+        function renderPagination(totalCount, page) {
+            totalPages = Math.ceil(totalCount / pageSize) || 1;
+            currentPage = page;
+
+            document.getElementById("page-info").textContent = `${currentPage} / ${totalPages} ページ`;
+            document.getElementById("btn-prev").disabled = (currentPage <= 1);
+            document.getElementById("btn-next").disabled = (currentPage >= totalPages);
+        }
+
+        function changePage(delta) {
+            const newPage = currentPage + delta;
+            if (newPage >= 1 && newPage <= totalPages) {
+                loadUserPosts(newPage);
+            }
+        }
+
+        function formaiDate(dateString) {
+            if (!dateString) return '';
+            const date = new Date(dateString);
+            return new Intl.DateTimeFormat('ja-JP', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+            }).format(date);
+        }
+
+        async function loadUserPosts(page = 1) {
+            try {
+                const headers = {};
+                if (token) {
+                    headers["Authorization"] = "Bearer " + token;
+                }
+
+                const response = await fetch(
+                    `/api/users/${encodeURIComponent(userID)}/posts?page=${page}&page_size=${pageSize}`,
+                    { headers: headers }
+                );
+
+                if (!response.ok) {
+                    throw new Error("記事が取得できませんでした");
+                }
+
+                const data = await response.json();
+                const posts = data.posts || [];
+                const postsContainer = document.getElementById("postsContainer");
+
+                if (posts.length === 0) {
+                    postsContainer.innerHTML = "<li>まだ投稿はありません。</li>";
+                } else {
+                    postsContainer.innerHTML = posts.map(post => `
                 <li>
                     <a href="/posts/${encodeURIComponent(post.id)}">
                         <strong>${escapeHTML(post.title)}</strong>
@@ -207,60 +202,61 @@ async function loadUserPosts(page = 1) {
                     <p>${escapeHTML(formaiDate(post.created_at))}</p>
                 </li>
             `).join('');
+                }
+
+                renderPagination(data.total_count, data.page);
+            } catch (error) {
+                alert(error.message)
+            }
         }
 
-        renderPagination(data.total_count, data.page);
-    } catch (error) {
-        alert(error.message)
-    }
-}
+        async function loadUserPage() {
+            try {
+                const headers = {};
+                if (token) {
+                    headers["Authorization"] = "Bearer " + token;
+                }
 
-async function loadUserPage() {
-    try {
-        const headers = {};
-        if (token) {
-            headers["Authorization"] = "Bearer " + token;
+                const response = await fetch(
+                    `/api/opt/users/${encodeURIComponent(userID)}`,
+                    { headers: headers }
+                );
+
+                if (!response.ok) {
+                    throw new Error("データが取得できませんでした");
+                }
+
+                const res = await response.json();
+
+                // 自分のページなら編集ボタンを表示
+                if (res.is_me) {
+                    document.getElementById("editProfileButton").classList.remove("hidden");
+                    document.getElementById("status").textContent = "マイページ";
+                } else {
+                    document.getElementById("status").textContent = "ユーザーページ";
+                }
+
+                const data = res.data;
+                const profile = data.userprofile;
+
+                // Profile
+                document.getElementById("displayNameView").textContent = profile.display_name || '';
+                document.getElementById("bioView").textContent = profile.bio || '';
+                document.getElementById("userIdView").textContent = profile.user_id || '';
+
+                document.getElementById("content").classList.remove("hidden");
+
+                loadUserPosts(1)
+            } catch (e) {
+                alert(e.message);
+                logout();
+            }
         }
 
-        const response = await fetch(
-            `/api/opt/users/${encodeURIComponent(userID)}`,
-            { headers: headers }
-        );
+        loadUserPage();
 
-        if (!response.ok) {
-            throw new Error("データが取得できませんでした");
-        }
-
-        const res = await response.json();
-
-        // 自分のページなら編集ボタンを表示
-        if (res.is_me) {
-            document.getElementById("editProfileButton").classList.remove("hidden");
-            document.getElementById("status").textContent = "マイページ";
-        } else {
-            document.getElementById("status").textContent = "ユーザーページ";
-        }
-
-        const data = res.data;
-        const profile = data.userprofile;
-
-        // Profile
-        document.getElementById("displayNameView").textContent = profile.display_name || '';
-        document.getElementById("bioView").textContent = profile.bio || '';
-        document.getElementById("userIdView").textContent = profile.user_id || '';
-
-        document.getElementById("content").classList.remove("hidden");
-
-        loadUserPosts(1)
-    } catch (e) {
-        alert(e.message);
-        logout();
-    }
-}
-
-loadUserPage();
-
-</script>
+    </script>
 
 </body>
+
 </html>

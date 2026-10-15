@@ -1,74 +1,98 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
     <meta charset="UTF-8">
     <title>User Management - Admin</title>
+    <script src="/static/js/auth.js"></script>
+
     <style>
-        body { width: 650px; margin: 40px auto; font-family: sans-serif; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { border: 1px solid #ccc; padding: 10px; text-align: left; }
-        th { background-color: #f4f4f4; }
-        .error { color: red; font-weight: bold; }
-    </style>
-</head>
-<body>
-
-<h1>ユーザー管理画面</h1>
-<p id="msg"></p>
-
-<table>
-    <thead>
-        <tr>
-            <th>ID</th>
-            <th>ユーザー名</th>
-            <th>現在の権限</th>
-            <th>操作</th>
-        </tr>
-    </thead>
-    <tbody id="userTableBody">
-        <tr><td colspan="4">読み込み中...</td></tr>
-    </tbody>
-</table>
-
-<br>
-<button onclick="goMypage()">マイページに戻る</button>
-
-<script>
-const token = localStorage.getItem("token");
-if (!token) location.href = "/login";
-
-async function goMypage() {
-    try {
-        const response = await fetch("/api/me", {
-            headers: {
-                "Authorization": "Bearer " + token
-            }
-        });
-        if(!response.ok) {
-            throw new Error("ユーザー情報が取得できませんでした");
+        body {
+            width: 650px;
+            margin: 40px auto;
+            font-family: sans-serif;
         }
 
-        const user = await response.json();
-        location.href = `/users/${user.user_id}`;
-    } catch(error) {
-        alert(error.message);
-    }
-}
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
 
-function loadUsers() {
-    fetch('/api/admin/users', {
-        headers: { 'Authorization': 'Bearer ' + token }
-    })
-    .then(res => {
-        if (!res.ok) throw new Error("ユーザー一覧を取得できませんでした。");
-        return res.json();
-    })
-    .then(users => {
-        const tbody = document.getElementById("userTableBody");
-        tbody.innerHTML = "";
-        
-        users.forEach(user => {
-            tbody.innerHTML += `
+        th,
+        td {
+            border: 1px solid #ccc;
+            padding: 10px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f4f4f4;
+        }
+
+        .error {
+            color: red;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>ユーザー管理画面</h1>
+    <p id="msg"></p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>ユーザー名</th>
+                <th>現在の権限</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody id="userTableBody">
+            <tr>
+                <td colspan="4">読み込み中...</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <br>
+    <button onclick="goMypage()">マイページに戻る</button>
+
+    <script>
+
+        if (!localStorage.getItem("token")) {
+            location.href = "/login";
+        }
+
+        async function goMypage() {
+            try {
+                const response = await apiFetch("/api/me");
+                if (!response.ok) {
+                    throw new Error("ユーザー情報が取得できませんでした");
+                }
+
+                const user = await response.json();
+                location.href = `/users/${user.user_id}`;
+            } catch (error) {
+                alert(error.message);
+            }
+        }
+
+        function loadUsers() {
+            apiFetch("/api/admin/users")
+                .then(res => {
+                    if (!res.ok) throw new Error("ユーザー一覧を取得できませんでした。");
+                    return res.json();
+                })
+                .then(users => {
+                    const tbody = document.getElementById("userTableBody");
+                    tbody.innerHTML = "";
+
+                    users.forEach(user => {
+                        tbody.innerHTML += `
                 <tr>
                     <td>${user.id}</td>
                     <td>${user.username}</td>
@@ -82,38 +106,36 @@ function loadUsers() {
                     </td>
                 </tr>
             `;
-        });
-    })
-    .catch(err => {
-        document.getElementById("msg").className = "error";
-        document.getElementById("msg").textContent = err.message;
-    });
-}
+                    });
+                })
+                .catch(err => {
+                    document.getElementById("msg").className = "error";
+                    document.getElementById("msg").textContent = err.message;
+                });
+        }
 
-function updateUserRole(userId) {
-    const newRole = document.getElementById(`role-${userId}`).value;
-    
-    fetch(`/api/admin/users/${userId}/role`, {
-        method: 'PUT',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + token
-        },
-        body: JSON.stringify({ role: newRole })
-    })
-    .then(res => {
-        if (!res.ok) throw new Error("更新に失敗しました。");
-        return res.json();
-    })
-    .then(() => {
-        alert("権限を更新しました！");
-        loadUsers(); 
-    })
-    .catch(err => alert(err.message));
-}
+        function updateUserRole(userId) {
+            const newRole = document.getElementById(`role-${userId}`).value;
 
-loadUsers();
+            apiFetch(`/api/admin/users/${userId}/role`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ role: newRole })
+            })
+                .then(res => {
+                    if (!res.ok) throw new Error("更新に失敗しました。");
+                    return res.json();
+                })
+                .then(() => {
+                    alert("権限を更新しました！");
+                    loadUsers();
+                })
+                .catch(err => alert(err.message));
+        }
 
-</script>
+        loadUsers();
+
+    </script>
 </body>
+
 </html>

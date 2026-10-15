@@ -8,10 +8,14 @@ var (
 
 	ErrUsernameInvalidLength = errors.New("username must be between 3 and 20 characters")
 	ErrUsernameContainsSpace = errors.New("username cannot contain spaces")
-	ErrInvalidCredentials    = errors.New("invalid username or password")
-	ErrDatabase              = errors.New("database error")
 
-	ErrInvalidRole    = errors.New("invalid role spcified")
+	ErrPasswordInvalidLength = errors.New("password must be between 8 and 72 characters")
+	ErrPasswordWeak          = errors.New("password must contain both letters and digits")
+
+	ErrInvalidCredentials = errors.New("invalid username or password")
+	ErrDatabase           = errors.New("database error")
+
+	ErrInvalidRole    = errors.New("invalid role specified")
 	ErrSelfRoleChange = errors.New("cannot change your own role")
 	ErrForbidden      = errors.New("permission denied")
 
@@ -20,4 +24,8 @@ var (
 
 	ErrInvalidInput = errors.New("invalid input parameters")
 	ErrUnauthorized = errors.New("unauthorized")
+
+	ErrInvalidRefreshToken = errors.New("invalid refresh token")
+	ErrRefreshTokenExpired = errors.New("refresh token has expired")
+	ErrRefreshTokenRevoked = errors.New("refresh token has been revoked")
 )

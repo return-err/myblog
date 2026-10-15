@@ -5,8 +5,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/Rashomon-code/myblog/internal/service"
 	"github.com/gin-gonic/gin"
+	"github.com/return-err/myblog/internal/service"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -40,12 +40,6 @@ func TestAuthMiddleware_Success(t *testing.T) {
 			return
 		}
 
-		username, exists := c.Get("username")
-		if !exists || username != "testuser" {
-			c.Status(http.StatusInternalServerError)
-			return
-		}
-
 		role, exists := c.Get("role")
 		if !exists || role != "user" {
 			c.Status(http.StatusInternalServerError)
@@ -57,7 +51,7 @@ func TestAuthMiddleware_Success(t *testing.T) {
 
 	r := setupTestRouter(mw.AuthMiddleware(), handler)
 
-	tokenString, _ := mw.jwtService.GenerateToken("testuser", int64(100), "user")
+	tokenString, _ := mw.jwtService.GenerateToken(int64(100), "user")
 
 	req := httptest.NewRequest(http.MethodGet, "/test", nil)
 	req.Header.Set("Authorization", "Bearer "+tokenString)
@@ -109,7 +103,7 @@ func TestAuthMiddleware_InvalidFormat(t *testing.T) {
 func TestAuthMiddleware_InvalidToken(t *testing.T) {
 	mw := newTestMiddleware("test")
 	wrongJWTService := service.NewJWTService("wrong")
-	tokenString, _ := wrongJWTService.GenerateToken("wrong", int64(100), "user")
+	tokenString, _ := wrongJWTService.GenerateToken(int64(100), "user")
 	handlerReached := false
 	handler := func(c *gin.Context) {
 		handlerReached = true
@@ -212,12 +206,6 @@ func TestOptionalAuthMiddleware_ValidToken(t *testing.T) {
 			return
 		}
 
-		username, exists := c.Get("username")
-		if !exists || username != "testuser" {
-			c.Status(http.StatusInternalServerError)
-			return
-		}
-
 		role, exists := c.Get("role")
 		if !exists || role != "user" {
 			c.Status(http.StatusInternalServerError)
@@ -228,7 +216,7 @@ func TestOptionalAuthMiddleware_ValidToken(t *testing.T) {
 
 	r := setupTestRouter(mw.OptionalAuthMiddleware(), handler)
 
-	tokenString, _ := mw.jwtService.GenerateToken("testuser", int64(100), "user")
+	tokenString, _ := mw.jwtService.GenerateToken(int64(100), "user")
 
 	req := httptest.NewRequest(http.MethodGet, "/test", nil)
 	req.Header.Set("Authorization", "Bearer "+tokenString)

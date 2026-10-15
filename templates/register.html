@@ -25,57 +25,57 @@
 
 <body>
 
-<h1>登録</h1>
+    <h1>登録</h1>
 
-<form id="registerForm">
+    <form id="registerForm">
 
-    <p>Username</p>
-    <input type="text" id="username">
+        <p>Username</p>
+        <input type="text" id="username">
 
-    <p>Password</p>
-    <input type="password" id="password">
+        <p>Password</p>
+        <input type="password" id="password">
 
-    <button type="submit">登録します</button>
+        <button type="submit">登録します</button>
 
-</form>
+    </form>
 
-<p>
-    アカウントお持ちですか?
-    <a href="/login">ログイン</a>
-</p>
+    <p>
+        アカウントお持ちですか?
+        <a href="/login">ログイン</a>
+    </p>
 
-<script>
+    <script>
 
-document.getElementById("registerForm").addEventListener("submit", async function(e){
+        document.getElementById("registerForm").addEventListener("submit", async function (e) {
+            e.preventDefault();
 
-    e.preventDefault();
+            const username = document.getElementById("username").value;
+            const password = document.getElementById("password").value;
 
-    const username = document.getElementById("username").value;
-    const password = document.getElementById("password").value;
+            const response = await fetch("/api/auth/register", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    username,
+                    password
+                })
+            });
 
-    const response = await fetch("/api/auth/register",{
-        method:"POST",
-        headers:{
-            "Content-Type":"application/json"
-        },
-        body:JSON.stringify({
-            username,
-            password
-        })
-    });
+            const result = await response.json();
 
-    const result = await response.json();
+            if (response.ok) {
+                alert("Register Success");
+                location.href = "/login";
+            } else {
+                alert(result.error || "Register Failed");
+            }
 
-    if(response.ok){
-        alert("Register Success");
-        location.href="/login";
-    }else{
-        alert(result.error || "Register Failed");
-    }
+        });
 
-});
-
-</script>
+    </script>
 
 </body>
+
 </html>

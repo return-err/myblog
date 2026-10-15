@@ -3,7 +3,7 @@ package repository
 import (
 	"testing"
 
-	migrator "github.com/Rashomon-code/myblog/db"
+	migrator "github.com/return-err/myblog/db"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/bcrypt"

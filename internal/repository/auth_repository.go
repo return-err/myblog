@@ -4,10 +4,11 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"time"
 
-	"github.com/Rashomon-code/myblog/internal/apperror"
-	"github.com/Rashomon-code/myblog/internal/model"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/return-err/myblog/internal/apperror"
+	"github.com/return-err/myblog/internal/model"
 )
 
 type AuthRepository struct {
@@ -78,4 +79,112 @@ func (r *AuthRepository) GetUserByUsername(username string) (*model.User, error)
 	}
 
 	return &user, nil
+}
+
+func (r *AuthRepository) GetRoleByUserID(userID int64) (string, error) {
+	var role string
+
+	err := r.db.QueryRow(`
+		SELECT role
+		FROM users
+		WHERE id = $1
+	`, userID).Scan(&role)
+
+	if err != nil {
+		return "", fmt.Errorf("failed to query role by user id: %w", err)
+	}
+	return role, nil
+}
+
+func (r *AuthRepository) SaveRefreshToken(userID int64, refreshToken string, expiresAt time.Time) error {
+	insertSQL := `
+		INSERT INTO refresh_tokens (user_id, token, expires_at)
+		VALUES ($1, $2, $3)
+	`
+	_, err := r.db.Exec(insertSQL, userID, refreshToken, expiresAt)
+	if err != nil {
+		return fmt.Errorf("failed to insert refresh token: %w", err)
+	}
+
+	return nil
+}
+
+func (r *AuthRepository) FindRefreshToken(token string) (*model.RefreshToken, error) {
+	var refreshToken model.RefreshToken
+
+	err := r.db.QueryRow(`
+		SELECT id, user_id, token, revoked, expires_at
+		FROM refresh_tokens
+		WHERE token = $1
+	`, token).Scan(
+		&refreshToken.ID,
+		&refreshToken.UserID,
+		&refreshToken.Token,
+		&refreshToken.Revoked,
+		&refreshToken.ExpiresAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query token: %w", err)
+	}
+
+	return &refreshToken, nil
+}
+
+func (r *AuthRepository) UseRefreshToken(tokenID int) error {
+	_, err := r.db.Exec(`
+		UPDATE refresh_tokens
+		SET revoked = true
+		WHERE id = $1
+	`, tokenID)
+	if err != nil {
+		return fmt.Errorf("failed to update revoked: %w", err)
+	}
+	return nil
+}
+
+func (r *AuthRepository) RotateRefreshToken(oldTokenID int, userID int64, refreshToken string, expiresAt time.Time) error {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return fmt.Errorf("failed to created transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	result, err := tx.Exec(`
+		UPDATE refresh_tokens
+		SET revoked = true
+		WHERE id = $1 AND user_id = $2 AND revoked = FALSE
+	`, oldTokenID, userID)
+	if err != nil {
+		return fmt.Errorf("failed to revoke refresh token: %w", err)
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to revoke refresh token: %w", err)
+	}
+	if rows != 1 {
+		return apperror.ErrRefreshTokenRevoked
+	}
+
+	if _, err := tx.Exec(`
+		INSERT INTO refresh_tokens (user_id, token, expires_at)
+		VALUES ($1, $2, $3)
+	`, userID, refreshToken, expiresAt); err != nil {
+		return fmt.Errorf("failed to create refresh token: %w", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("failed to commit refresh token: %w", err)
+	}
+
+	return nil
+}
+
+func (r *AuthRepository) RevokeAllRefreshTokens(userID int64) error {
+	_, err := r.db.Exec(`
+		UPDATE refresh_tokens
+		SET revoked = TRUE	
+		WHERE user_id = $1 AND revoked = FALSE
+	`, userID)
+	return err
 }

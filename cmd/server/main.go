@@ -4,12 +4,12 @@ import (
 	"log"
 	"os"
 
-	"github.com/Rashomon-code/myblog/internal/handle"
-	"github.com/Rashomon-code/myblog/internal/middleware"
-	"github.com/Rashomon-code/myblog/internal/repository"
-	"github.com/Rashomon-code/myblog/internal/router"
-	"github.com/Rashomon-code/myblog/internal/service"
 	"github.com/joho/godotenv"
+	"github.com/return-err/myblog/internal/handle"
+	"github.com/return-err/myblog/internal/middleware"
+	"github.com/return-err/myblog/internal/repository"
+	"github.com/return-err/myblog/internal/router"
+	"github.com/return-err/myblog/internal/service"
 )
 
 func main() {

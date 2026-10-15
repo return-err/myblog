@@ -6,8 +6,8 @@ import (
 	"math/rand/v2"
 	"time"
 
-	"github.com/Rashomon-code/myblog/internal/repository"
 	"github.com/joho/godotenv"
+	"github.com/return-err/myblog/internal/repository"
 )
 
 func main() {

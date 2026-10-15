@@ -4,6 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <title>投稿編集</title>
+    <script src="/static/js/auth.js"></script>
 
     <style>
         body {
@@ -30,109 +31,81 @@
 
 <body>
 
-<h1>投稿編集</h1>
+    <h1>投稿編集</h1>
 
-<form id="postForm">
+    <form id="postForm">
 
-    <p>Title</p>
-    <input type="text" id="title">
+        <p>Title</p>
+        <input type="text" id="title">
 
-    <p>Content</p>
-    <textarea id="content"></textarea>
+        <p>Content</p>
+        <textarea id="content"></textarea>
 
-    <button type="submit">更新します</button>
+        <button type="submit">更新します</button>
 
-</form>
+    </form>
 
-<p>
-    <a href="/">ホーム画面</a>
-</p>
+    <p>
+        <a href="/">ホーム画面</a>
+    </p>
 
-<script>
+    <script>
 
-// tokenチェック
-const token = localStorage.getItem("token");
-
-if (!token) {
-    alert("先にログインしてください");
-    location.href = "/login";
-}
-
-// URLからidを取得
-const pathSegments = window.location.pathname.split("/").filter(Boolean);
-const postId = pathSegments[1]
-
-// ページ表示時に記事を取得
-async function loadPost() {
-
-    const response = await fetch(`/api/posts/${postId}`, {
-
-        headers: {
-            "Authorization": "Bearer " + token
+        // tokenチェック
+        if (!localStorage.getItem("token")) {
+            alert("先にログインしてください");
+            location.href = "/login";
         }
 
-    });
+        // URLからidを取得
+        const pathSegments = window.location.pathname.split("/").filter(Boolean);
+        const postId = pathSegments[1]
 
-    if (!response.ok) {
+        // ページ表示時に記事を取得
+        async function loadPost() {
+            const response = await apiFetch(`/api/posts/${postId}`);
+            if (!response.ok) {
+                alert("記事が見つかりません");
+                location.href = "/";
+                return;
+            }
 
-        alert("記事が見つかりません");
+            const data = await response.json();
 
-        location.href = "/";
+            // フォームに値をセット
+            document.getElementById("title").value = data.post.title;
+            document.getElementById("content").value = data.post.content;
+        }
 
-        return;
+        loadPost();
 
-    }
+        // 更新
+        document.getElementById("postForm").addEventListener("submit", async function (e) {
+            e.preventDefault();
 
-    const data = await response.json();
+            const title = document.getElementById("title").value;
+            const content = document.getElementById("content").value;
 
-    // フォームに値をセット
-    document.getElementById("title").value = data.post.title;
-    document.getElementById("content").value = data.post.content;
-}
+            const response = await apiFetch(`/api/posts/${postId}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    title,
+                    content
+                })
+            });
 
-loadPost();
+            if (response.ok) {
+                alert("更新しました");
+                location.href = "/";
+            } else {
+                const error = await response.text();
+                alert(error);
+            }
+        });
 
-// 更新
-document.getElementById("postForm").addEventListener("submit", async function(e){
-
-    e.preventDefault();
-
-    const title = document.getElementById("title").value;
-    const content = document.getElementById("content").value;
-
-    const response = await fetch(`/api/posts/${postId}`, {
-
-        method: "PUT",
-
-        headers: {
-            "Content-Type": "application/json",
-            "Authorization": "Bearer " + token
-        },
-
-        body: JSON.stringify({
-            title,
-            content
-        })
-
-    });
-
-    if (response.ok) {
-
-        alert("更新しました");
-
-        location.href = "/";
-
-    } else {
-
-        const error = await response.text();
-
-        alert(error);
-
-    }
-
-});
-
-</script>
+    </script>
 
 </body>
+
 </html>

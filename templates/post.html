@@ -4,6 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <title>新規投稿</title>
+    <script src="/static/js/auth.js"></script>
 
     <style>
         body {
@@ -30,74 +31,61 @@
 
 <body>
 
-<h1>新規投稿</h1>
+    <h1>新規投稿</h1>
 
-<form id="postForm">
+    <form id="postForm">
 
-    <p>Title</p>
-    <input type="text" id="title">
+        <p>Title</p>
+        <input type="text" id="title">
 
-    <p>Content</p>
-    <textarea id="content"></textarea>
+        <p>Content</p>
+        <textarea id="content"></textarea>
 
-    <button type="submit">投稿します</button>
+        <button type="submit">投稿します</button>
 
-</form>
+    </form>
 
-<p>
-    <a href="/">ホーム画面</a>
-</p>
+    <p>
+        <a href="/">ホーム画面</a>
+    </p>
 
-<script>
+    <script>
 
-//token チェック
-const token = localStorage.getItem("token");
+        //token チェック
+        if (!localStorage.getItem("token")) {
+            alert("先にログインしてください");
+            location.href = "/login";
+        }
 
-if (!token) {
-    alert("先にログインしてください");
-    location.href = "/login";
-}
+        document.getElementById("postForm").addEventListener("submit", async function (e) {
 
-document.getElementById("postForm").addEventListener("submit", async function(e){
+            e.preventDefault();
 
-    e.preventDefault();
+            const title = document.getElementById("title").value;
+            const content = document.getElementById("content").value;
 
-    const title = document.getElementById("title").value;
-    const content = document.getElementById("content").value;
+            const response = await apiFetch("/api/posts", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    title,
+                    content
+                })
+            });
 
-    const response = await fetch("/api/posts",{
+            if (response.ok) {
+                alert("投稿しました");
+                location.href = "/";
+            } else {
+                const error = await response.text();
+                alert(error);
+            }
+        });
 
-        method:"POST",
-
-        headers:{
-            "Content-Type":"application/json",
-            "Authorization":"Bearer " + token
-        },
-
-        body:JSON.stringify({
-            title,
-            content
-        })
-
-    });
-
-    if(response.ok){
-
-        alert("投稿しました");
-
-        location.href="/";
-
-    }else{
-
-        const error = await response.text();
-
-        alert(error);
-
-    }
-
-});
-
-</script>
+    </script>
 
 </body>
+
 </html>

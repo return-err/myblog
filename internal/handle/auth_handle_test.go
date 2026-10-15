@@ -7,23 +7,29 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Rashomon-code/myblog/internal/apperror"
 	"github.com/gin-gonic/gin"
+	"github.com/return-err/myblog/internal/apperror"
+	"github.com/return-err/myblog/internal/model"
 )
 
 type mockAuthService struct {
 	AuthService
 
 	registerFn func(username string, password string) error
-	loginFn    func(username, password string) (string, error)
+	loginFn    func(username, password string) (*model.TokenPair, error)
+	refreshFn  func(refreshToken string) (*model.TokenPair, error)
 }
 
 func (m *mockAuthService) Register(username string, password string) error {
 	return m.registerFn(username, password)
 }
 
-func (m *mockAuthService) Login(username, password string) (string, error) {
+func (m *mockAuthService) Login(username, password string) (*model.TokenPair, error) {
 	return m.loginFn(username, password)
+}
+
+func (m *mockAuthService) Refresh(refreshToken string) (*model.TokenPair, error) {
+	return m.refreshFn(refreshToken)
 }
 
 func setupTestRouter(method, url string, handler gin.HandlerFunc, middlewares ...gin.HandlerFunc) *gin.Engine {
@@ -96,30 +102,33 @@ func TestLogin(t *testing.T) {
 	tests := []struct {
 		name        string
 		reqBody     string
-		mockLoginFn func(username, password string) (string, error)
+		mockLoginFn func(username, password string) (*model.TokenPair, error)
 		wantCode    int
 	}{
 		{
 			name:    "success",
 			reqBody: `{"username": "testname", "password": "123456"}`,
-			mockLoginFn: func(username, password string) (string, error) {
-				return "", nil
+			mockLoginFn: func(username, password string) (*model.TokenPair, error) {
+				return &model.TokenPair{
+					AccessToken:  "test-access-token",
+					RefreshToken: "test-refresh-token",
+				}, nil
 			},
 			wantCode: http.StatusOK,
 		},
 		{
 			name:    "invalid json body",
 			reqBody: `{"username": "testname", "password": }`,
-			mockLoginFn: func(username, password string) (string, error) {
-				return "", nil
+			mockLoginFn: func(username, password string) (*model.TokenPair, error) {
+				return nil, nil
 			},
 			wantCode: http.StatusBadRequest,
 		},
 		{
 			name:    "invalid user",
 			reqBody: `{"username": "testname", "password": "654321"}`,
-			mockLoginFn: func(username, password string) (string, error) {
-				return "", apperror.ErrInvalidCredentials
+			mockLoginFn: func(username, password string) (*model.TokenPair, error) {
+				return nil, apperror.ErrInvalidCredentials
 			},
 			wantCode: http.StatusUnauthorized,
 		},
@@ -137,6 +146,94 @@ func TestLogin(t *testing.T) {
 			r.ServeHTTP(w, req)
 			if w.Code != tt.wantCode {
 				t.Errorf("expected status code %d, got %d, %s", tt.wantCode, w.Code, w.Body.String())
+			}
+		})
+	}
+}
+
+func TestRefresh(t *testing.T) {
+	tests := []struct {
+		name          string
+		cookies       []*http.Cookie
+		mockRefreshFn func(refreshToken string) (*model.TokenPair, error)
+		wantCode      int
+	}{
+		{
+			name: "success",
+			cookies: []*http.Cookie{
+				{
+					Name:  "refresh_token",
+					Value: "valid-refresh-token",
+				},
+			},
+			mockRefreshFn: func(refreshToken string) (*model.TokenPair, error) {
+				return &model.TokenPair{
+					AccessToken:  "new-access-token",
+					RefreshToken: "new-refresh-token",
+				}, nil
+			},
+			wantCode: http.StatusOK,
+		},
+		{
+			name: "missing refresh token cookie",
+			mockRefreshFn: func(refreshToken string) (*model.TokenPair, error) {
+				t.Fatal("Refresh should not be called")
+				return nil, nil
+			},
+			wantCode: http.StatusInternalServerError,
+		},
+		{
+			name: "empty refresh token cookie",
+			cookies: []*http.Cookie{
+				{
+					Name:  "refresh_token",
+					Value: "",
+				},
+			},
+			mockRefreshFn: func(refreshToken string) (*model.TokenPair, error) {
+				if refreshToken == "" {
+					return nil, apperror.ErrInvalidRefreshToken
+				}
+				t.Errorf("expected empty token, got %q", refreshToken)
+				return nil, nil
+			},
+			wantCode: http.StatusUnauthorized,
+		},
+		{
+			name: "invalid refresh token",
+			cookies: []*http.Cookie{
+				{
+					Name:  "refresh_token",
+					Value: "invalid token",
+				},
+			},
+			mockRefreshFn: func(refreshToken string) (*model.TokenPair, error) {
+				if refreshToken == "invalid token" {
+					return nil, apperror.ErrInvalidRefreshToken
+				}
+				t.Errorf("unexpected token: %q", refreshToken)
+				return nil, nil
+			},
+			wantCode: http.StatusUnauthorized,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockAuthService := &mockAuthService{refreshFn: tt.mockRefreshFn}
+			mockHandle := NewAuthHandle(mockAuthService)
+
+			r := setupTestRouter(http.MethodPost, "/test", mockHandle.Refresh)
+			req := httptest.NewRequest(http.MethodPost, "/test", nil)
+			req.Header.Set("Content-Type", "application/json")
+			for _, cookie := range tt.cookies {
+				req.AddCookie(cookie)
+			}
+			w := httptest.NewRecorder()
+
+			r.ServeHTTP(w, req)
+			if w.Code != tt.wantCode {
+				t.Errorf("expected status code %d, got %d, body %s", tt.wantCode, w.Code, w.Body.String())
 			}
 		})
 	}

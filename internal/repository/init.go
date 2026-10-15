@@ -6,8 +6,8 @@ import (
 	"log"
 	"os"
 
-	migrator "github.com/Rashomon-code/myblog/db"
 	_ "github.com/jackc/pgx/v5/stdlib"
+	migrator "github.com/return-err/myblog/db"
 	"golang.org/x/crypto/bcrypt"
 )
 

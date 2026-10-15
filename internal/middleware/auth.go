@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/Rashomon-code/myblog/internal/service"
 	"github.com/gin-gonic/gin"
+	"github.com/return-err/myblog/internal/service"
 )
 
 type Middleware struct {
@@ -42,7 +42,6 @@ func (m *Middleware) AuthMiddleware() gin.HandlerFunc {
 		}
 
 		c.Set("userID", claims.UserID)
-		c.Set("username", claims.Username)
 		c.Set("role", claims.Role)
 		c.Next()
 	}
@@ -83,7 +82,6 @@ func (m *Middleware) OptionalAuthMiddleware() gin.HandlerFunc {
 
 			if err == nil {
 				c.Set("userID", claims.UserID)
-				c.Set("username", claims.Username)
 				c.Set("role", claims.Role)
 			}
 		}

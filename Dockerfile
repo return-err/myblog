@@ -16,6 +16,7 @@ WORKDIR /app
 
 COPY --from=builder /app/myblog .
 COPY --from=builder /app/templates ./templates
+COPY --from=builder /app/static ./static
 
 EXPOSE 8080
 

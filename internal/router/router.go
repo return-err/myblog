@@ -1,13 +1,15 @@
 package router
 
 import (
-	"github.com/Rashomon-code/myblog/internal/handle"
-	"github.com/Rashomon-code/myblog/internal/middleware"
 	"github.com/gin-gonic/gin"
+	"github.com/return-err/myblog/internal/handle"
+	"github.com/return-err/myblog/internal/middleware"
 )
 
 func SetupRouter(authHandle *handle.AuthHandle, postHandle *handle.PostHandle, mw *middleware.Middleware, userHandle *handle.UserHandle) *gin.Engine {
 	r := gin.Default()
+
+	r.Static("/static", "./static")
 
 	r.GET("/", func(ctx *gin.Context) {
 		ctx.File("templates/index.html")
@@ -52,6 +54,7 @@ func SetupRouter(authHandle *handle.AuthHandle, postHandle *handle.PostHandle, m
 		{
 			auth.POST("/register", authHandle.Register)
 			auth.POST("/login", authHandle.Login)
+			auth.POST("/refresh", authHandle.Refresh)
 		}
 
 		opt := api.Group("/opt")
@@ -68,6 +71,7 @@ func SetupRouter(authHandle *handle.AuthHandle, postHandle *handle.PostHandle, m
 			protected.DELETE("/posts/:id", postHandle.DeletePost)
 			protected.GET("/me", userHandle.MyPage)
 			protected.PUT("/me/profile", userHandle.UpdateProfile)
+			protected.POST("/auth/logout", authHandle.Logout)
 		}
 
 		admin := api.Group("/admin")
