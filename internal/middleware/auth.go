@@ -55,8 +55,8 @@ func (m *Middleware) AuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		tokenVersion, err := m.authRepo.GetTokenVersionByUserID(userID)
-		if err != nil || claims.TokenVersion != tokenVersion {
+		dbTokenVersion, err := m.authRepo.GetTokenVersionByUserID(userID)
+		if err != nil || claims.TokenVersion != dbTokenVersion {
 			handle.RespondWithError(c, apperror.ErrUnauthorized)
 			c.Abort()
 			return

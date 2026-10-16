@@ -40,22 +40,19 @@ func TestGetUserProfile(t *testing.T) {
 }
 
 func TestUpdateRole(t *testing.T) {
-	resetTable(t)
-	defer resetTable(t)
-
 	authRepo := NewAuthRepository(testDB)
 	userRepo := NewUserRepository(testDB)
-	err := authRepo.CreateUserWithProfile("testuser", "hashedpass")
-	require.NoError(t, err)
 
 	tests := []struct {
-		name    string
-		userID  int64
-		wantErr bool
+		name        string
+		userID      int64
+		wantErr     bool
+		wantVersion int
 	}{
 		{
-			name:   "success",
-			userID: 1,
+			name:        "success",
+			userID:      1,
+			wantVersion: 1,
 		},
 		{
 			name:    "invalid user",
@@ -66,12 +63,25 @@ func TestUpdateRole(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := userRepo.UpdateRole(tt.userID, "admin")
+			resetTable(t)
+			defer resetTable(t)
+			err := authRepo.CreateUserWithProfile("testuser", "hashedpass")
+			require.NoError(t, err)
+
+			err = userRepo.UpdateRole(tt.userID, "admin")
 			if tt.wantErr {
 				require.Error(t, err)
 			} else {
 				require.NoError(t, err)
+
+				var tokenVersion int
+				err := testDB.QueryRow(`
+					SELECT token_version FROM users WHERE id = $1
+				`, tt.userID).Scan(&tokenVersion)
+				require.NoError(t, err)
+				assert.Equal(t, tt.wantVersion, tokenVersion)
 			}
+
 		})
 	}
 }

@@ -40,7 +40,7 @@ func (r *UserRepository) GetUserProfile(userID int64) (*model.UserProfile, error
 }
 
 func (r *UserRepository) UpdateRole(userID int64, newRole string) error {
-	updateSQL := `UPDATE users SET role = $1 WHERE id = $2 RETURNING id`
+	updateSQL := `UPDATE users SET role = $1, token_version = token_version + 1 WHERE id = $2 RETURNING id`
 
 	var returnedID int64
 	err := r.db.QueryRow(updateSQL, newRole, userID).Scan(&returnedID)
@@ -99,6 +99,27 @@ func (r *UserRepository) UpdateUserProfile(userID int64, displayName, bio string
 			return apperror.ErrUserNotFound
 		}
 		return fmt.Errorf("failed to update user profile: %w", err)
+	}
+
+	return nil
+}
+
+func (r *UserRepository) IncrementTokenVersion(userID int64) error {
+	result, err := r.db.Exec(`
+		UPDATE users
+		SET token_version = token_version + 1
+		WHERE id = $1	
+	`, userID)
+	if err != nil {
+		return fmt.Errorf("failed to increment token version: %w", err)
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to check rows affected: %w", err)
+	}
+	if rows == 0 {
+		return errors.New("user not found")
 	}
 
 	return nil
