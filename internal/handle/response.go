@@ -48,6 +48,12 @@ func RespondWithError(c *gin.Context, err error) {
 		return
 	}
 
+	//429
+	if errors.Is(err, apperror.ErrLoginRateLimit) {
+		c.JSON(http.StatusTooManyRequests, gin.H{"error": err.Error()})
+		return
+	}
+
 	//500
 	log.Printf("[Internal Server Error] %v", err)
 	c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
