@@ -14,6 +14,7 @@ type UserRepository interface {
 	UpdateRole(userID int64, newRole string) error
 	GetAllUsers() ([]model.UserResponse, error)
 	UpdateUserProfile(userID int64, displayName, bio string) error
+	IncrementTokenVersion(userID int64) error
 }
 
 func NewUserService(repo UserRepository) *UserService {

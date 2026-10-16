@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -20,9 +21,21 @@ func setupTestRouter(mw gin.HandlerFunc, handler func(c *gin.Context)) *gin.Engi
 	return r
 }
 
+type mockAuthRepo struct {
+	service.AuthRepositoryInterface
+}
+
+func (m *mockAuthRepo) GetTokenVersionByUserID(userID int64) (int, error) {
+	if userID != int64(100) {
+		return 0, errors.New("user not found")
+	}
+	return 1, nil
+}
+
 func newTestMiddleware(secret string) *Middleware {
 	jwtService := service.NewJWTService(secret)
-	mw := NewMiddleware(jwtService)
+	var mockRepo mockAuthRepo
+	mw := NewMiddleware(jwtService, &mockRepo)
 	return mw
 }
 
@@ -51,7 +64,7 @@ func TestAuthMiddleware_Success(t *testing.T) {
 
 	r := setupTestRouter(mw.AuthMiddleware(), handler)
 
-	tokenString, _ := mw.jwtService.GenerateToken(int64(100), "user")
+	tokenString, _ := mw.jwtService.GenerateToken(int64(100), "user", 1)
 
 	req := httptest.NewRequest(http.MethodGet, "/test", nil)
 	req.Header.Set("Authorization", "Bearer "+tokenString)
@@ -103,7 +116,7 @@ func TestAuthMiddleware_InvalidFormat(t *testing.T) {
 func TestAuthMiddleware_InvalidToken(t *testing.T) {
 	mw := newTestMiddleware("test")
 	wrongJWTService := service.NewJWTService("wrong")
-	tokenString, _ := wrongJWTService.GenerateToken(int64(100), "user")
+	tokenString, _ := wrongJWTService.GenerateToken(int64(100), "user", 1)
 	handlerReached := false
 	handler := func(c *gin.Context) {
 		handlerReached = true
@@ -216,7 +229,7 @@ func TestOptionalAuthMiddleware_ValidToken(t *testing.T) {
 
 	r := setupTestRouter(mw.OptionalAuthMiddleware(), handler)
 
-	tokenString, _ := mw.jwtService.GenerateToken(int64(100), "user")
+	tokenString, _ := mw.jwtService.GenerateToken(int64(100), "user", 1)
 
 	req := httptest.NewRequest(http.MethodGet, "/test", nil)
 	req.Header.Set("Authorization", "Bearer "+tokenString)

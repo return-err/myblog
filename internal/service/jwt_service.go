@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -16,11 +17,12 @@ func NewJWTService(secret string) *JWTService {
 	return &JWTService{Secret: secret}
 }
 
-func (j *JWTService) GenerateToken(userID int64, role string) (string, error) {
+func (j *JWTService) GenerateToken(userID int64, role string, tokenVersion int) (string, error) {
 	claims := model.Claims{
-		UserID: userID,
-		Role:   role,
+		Role:         role,
+		TokenVersion: tokenVersion,
 		RegisteredClaims: jwt.RegisteredClaims{
+			Subject:   strconv.FormatInt(userID, 10),
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(15 * time.Minute)),
 		},
 	}
@@ -53,7 +55,7 @@ func (j *JWTService) ParseToken(tokenString string) (model.Claims, error) {
 		return model.Claims{}, fmt.Errorf("Token 解析できませんでした: %w", err)
 	}
 	if !token.Valid {
-		return model.Claims{}, fmt.Errorf("無効な JWT")
+		return model.Claims{}, fmt.Errorf("無効な JWT: %w", err)
 	}
 
 	return claims, nil

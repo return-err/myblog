@@ -63,13 +63,14 @@ func (r *AuthRepository) CreateUserWithProfile(username, passwordHash string) er
 
 func (r *AuthRepository) GetUserByUsername(username string) (*model.User, error) {
 	var user model.User
-	selectSQL := `SELECT id, username, password_hash, role FROM users WHERE username = $1`
+	selectSQL := `SELECT id, username, password_hash, role, token_version FROM users WHERE username = $1`
 
 	err := r.db.QueryRow(selectSQL, username).Scan(
 		&user.ID,
 		&user.Username,
 		&user.PasswordHash,
 		&user.Role,
+		&user.TokenVersion,
 	)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -89,11 +90,26 @@ func (r *AuthRepository) GetRoleByUserID(userID int64) (string, error) {
 		FROM users
 		WHERE id = $1
 	`, userID).Scan(&role)
-
 	if err != nil {
 		return "", fmt.Errorf("failed to query role by user id: %w", err)
 	}
+
 	return role, nil
+}
+
+func (r *AuthRepository) GetTokenVersionByUserID(userID int64) (int, error) {
+	var tokenVersion int
+
+	err := r.db.QueryRow(`
+		SELECT token_version
+		FROM users
+		WHERE id = $1	
+	`, userID).Scan(&tokenVersion)
+	if err != nil {
+		return 0, fmt.Errorf("failed to query token version by user id: %w", err)
+	}
+
+	return tokenVersion, nil
 }
 
 func (r *AuthRepository) SaveRefreshToken(userID int64, refreshToken string, expiresAt time.Time) error {

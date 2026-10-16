@@ -18,9 +18,10 @@ import (
 type AuthRepositoryInterface interface {
 	CreateUserWithProfile(username, passwordHash string) error
 	GetUserByUsername(username string) (*model.User, error)
+	GetRoleByUserID(userID int64) (string, error)
+	GetTokenVersionByUserID(userID int64) (int, error)
 	SaveRefreshToken(userID int64, refreshToken string, expiresAt time.Time) error
 	FindRefreshToken(token string) (*model.RefreshToken, error)
-	GetRoleByUserID(userID int64) (string, error)
 	RotateRefreshToken(oldTokenID int, userID int64, refreshToken string, expiredAt time.Time) error
 	RevokeAllRefreshTokens(userID int64) error
 }
@@ -62,7 +63,7 @@ func (s *AuthService) Login(username, password string) (*model.TokenPair, error)
 		return nil, apperror.ErrInvalidCredentials
 	}
 
-	accessToken, err := s.jwt.GenerateToken(user.ID, user.Role)
+	accessToken, err := s.jwt.GenerateToken(user.ID, user.Role, user.TokenVersion)
 	if err != nil {
 		return nil, err
 	}
@@ -105,7 +106,12 @@ func (s *AuthService) Refresh(refreshToken string) (*model.TokenPair, error) {
 		return nil, err
 	}
 
-	accessToken, err := s.jwt.GenerateToken(token.UserID, role)
+	tokenVersion, err := s.repo.GetTokenVersionByUserID(token.UserID)
+	if err != nil {
+		return nil, err
+	}
+
+	accessToken, err := s.jwt.GenerateToken(token.UserID, role, tokenVersion)
 	if err != nil {
 		return nil, err
 	}

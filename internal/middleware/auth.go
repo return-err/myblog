@@ -2,18 +2,25 @@ package middleware
 
 import (
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/return-err/myblog/internal/apperror"
+	"github.com/return-err/myblog/internal/handle"
 	"github.com/return-err/myblog/internal/service"
 )
 
 type Middleware struct {
 	jwtService *service.JWTService
+	authRepo   service.AuthRepositoryInterface
 }
 
-func NewMiddleware(jwtService *service.JWTService) *Middleware {
-	return &Middleware{jwtService: jwtService}
+func NewMiddleware(jwtService *service.JWTService, authRepo service.AuthRepositoryInterface) *Middleware {
+	return &Middleware{
+		jwtService: jwtService,
+		authRepo:   authRepo,
+	}
 }
 
 func (m *Middleware) AuthMiddleware() gin.HandlerFunc {
@@ -41,7 +48,21 @@ func (m *Middleware) AuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		c.Set("userID", claims.UserID)
+		userID, err := strconv.ParseInt(claims.Subject, 10, 64)
+		if err != nil {
+			handle.RespondWithError(c, err)
+			c.Abort()
+			return
+		}
+
+		dbTokenVersion, err := m.authRepo.GetTokenVersionByUserID(userID)
+		if err != nil || claims.TokenVersion != dbTokenVersion {
+			handle.RespondWithError(c, apperror.ErrUnauthorized)
+			c.Abort()
+			return
+		}
+
+		c.Set("userID", userID)
 		c.Set("role", claims.Role)
 		c.Next()
 	}
@@ -79,11 +100,25 @@ func (m *Middleware) OptionalAuthMiddleware() gin.HandlerFunc {
 		if len(parts) == 2 && parts[0] == "Bearer" {
 			tokenString := parts[1]
 			claims, err := m.jwtService.ParseToken(tokenString)
-
-			if err == nil {
-				c.Set("userID", claims.UserID)
-				c.Set("role", claims.Role)
+			if err != nil {
+				c.Next()
+				return
 			}
+
+			userID, err := strconv.ParseInt(claims.Subject, 10, 64)
+			if err != nil {
+				c.Next()
+				return
+			}
+
+			tokenVersion, err := m.authRepo.GetTokenVersionByUserID(userID)
+			if err != nil || claims.TokenVersion != tokenVersion {
+				c.Next()
+				return
+			}
+
+			c.Set("userID", userID)
+			c.Set("role", claims.Role)
 		}
 		c.Next()
 	}
