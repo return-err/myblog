@@ -12,7 +12,7 @@ import (
 func SetupRouter(authHandle *handle.AuthHandle, postHandle *handle.PostHandle, mw *middleware.Middleware, userHandle *handle.UserHandle) *gin.Engine {
 	r := gin.Default()
 
-	loginLimiter := rate.NewLimiter(rate.Every(10*time.Second), 3)
+	loginLimiter := middleware.NewIPLimiter(rate.Every(10*time.Second), 10)
 
 	r.Static("/static", "./static")
 
