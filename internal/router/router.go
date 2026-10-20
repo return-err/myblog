@@ -1,13 +1,18 @@
 package router
 
 import (
+	"time"
+
 	"github.com/gin-gonic/gin"
 	"github.com/return-err/myblog/internal/handle"
 	"github.com/return-err/myblog/internal/middleware"
+	"golang.org/x/time/rate"
 )
 
 func SetupRouter(authHandle *handle.AuthHandle, postHandle *handle.PostHandle, mw *middleware.Middleware, userHandle *handle.UserHandle) *gin.Engine {
 	r := gin.Default()
+
+	loginLimiter := middleware.NewIPLimiter(rate.Every(10*time.Second), 10)
 
 	r.Static("/static", "./static")
 
@@ -53,7 +58,7 @@ func SetupRouter(authHandle *handle.AuthHandle, postHandle *handle.PostHandle, m
 		auth := api.Group("/auth")
 		{
 			auth.POST("/register", authHandle.Register)
-			auth.POST("/login", authHandle.Login)
+			auth.POST("/login", middleware.LoginRateLimit(loginLimiter), authHandle.Login)
 			auth.POST("/refresh", authHandle.Refresh)
 		}
 
