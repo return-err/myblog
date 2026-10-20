@@ -146,18 +146,6 @@ func (r *AuthRepository) FindRefreshToken(token string) (*model.RefreshToken, er
 	return &refreshToken, nil
 }
 
-func (r *AuthRepository) UseRefreshToken(tokenID int) error {
-	_, err := r.db.Exec(`
-		UPDATE refresh_tokens
-		SET revoked = true
-		WHERE id = $1
-	`, tokenID)
-	if err != nil {
-		return fmt.Errorf("failed to update revoked: %w", err)
-	}
-	return nil
-}
-
 func (r *AuthRepository) RotateRefreshToken(oldTokenID int, userID int64, refreshToken string, expiresAt time.Time) error {
 	tx, err := r.db.Begin()
 	if err != nil {

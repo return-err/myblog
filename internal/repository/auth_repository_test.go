@@ -3,6 +3,7 @@ package repository
 import (
 	"database/sql"
 	"fmt"
+	"sync"
 	"testing"
 	"time"
 
@@ -153,7 +154,7 @@ func TestFindRefreshToken(t *testing.T) {
 		expiresAT := time.Now().Add(24 * time.Hour)
 		err = repo.SaveRefreshToken(100, "token", expiresAT)
 		require.NoError(t, err)
-		err = repo.UseRefreshToken(1)
+		err = UseRefreshToken(1, testDB)
 		require.NoError(t, err)
 		refreshToken, err := repo.FindRefreshToken("token")
 		require.NoError(t, err)
@@ -170,25 +171,6 @@ func TestFindRefreshToken(t *testing.T) {
 		refreshToken, err := repo.FindRefreshToken("non existent token")
 		assert.Error(t, err)
 		assert.Nil(t, refreshToken)
-	})
-}
-
-func TestUseRefreshToken(t *testing.T) {
-	repo := NewAuthRepository(testDB)
-	t.Run("success", func(t *testing.T) {
-		resetTable(t)
-		defer resetTable(t)
-
-		err := createTestUser(int64(100), testDB)
-		require.NoError(t, err)
-
-		err = repo.SaveRefreshToken(100, "token", time.Now())
-		require.NoError(t, err)
-		err = repo.UseRefreshToken(1)
-		require.NoError(t, err)
-		refreshToken, err := repo.FindRefreshToken("token")
-		require.NoError(t, err)
-		assert.True(t, refreshToken.Revoked)
 	})
 }
 
@@ -251,7 +233,7 @@ func TestRotateRefreshToken(t *testing.T) {
 			require.NoError(t, err)
 
 			if tt.revoked {
-				err := repo.UseRefreshToken(1)
+				err := UseRefreshToken(1, testDB)
 				require.NoError(t, err)
 			}
 
@@ -282,6 +264,72 @@ func TestRotateRefreshToken(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestRotateRefreshTokenConcurrent(t *testing.T) {
+	repo := NewAuthRepository(testDB)
+	resetTable(t)
+	defer resetTable(t)
+
+	err := createTestUser(int64(1), testDB)
+	require.NoError(t, err)
+
+	err = repo.SaveRefreshToken(1, "old token", time.Now().Add(10*time.Minute))
+	require.NoError(t, err)
+
+	start := make(chan struct{})
+	var wg sync.WaitGroup
+	errs := make(chan error, 2)
+
+	tokens := []string{"new token 1", "new token 2"}
+	for _, token := range tokens {
+		wg.Add(1)
+
+		go func(token string) {
+			defer wg.Done()
+
+			<-start
+
+			err := repo.RotateRefreshToken(1, 1, token, time.Now().Add(10*time.Minute))
+			errs <- err
+		}(token)
+	}
+
+	close(start)
+
+	wg.Wait()
+	close(errs)
+
+	successCount := 0
+	failureCount := 0
+
+	for err := range errs {
+		if err == nil {
+			successCount++
+		} else {
+			failureCount++
+		}
+	}
+	require.Equal(t, 1, successCount)
+	require.Equal(t, 1, failureCount)
+
+	var oldRevoked bool
+	err = testDB.QueryRow(`
+		SELECT revoked
+		FROM refresh_tokens
+		WHERE id = 1	
+	`).Scan(&oldRevoked)
+	require.NoError(t, err)
+	require.True(t, oldRevoked)
+
+	var newTokenCount int
+	err = testDB.QueryRow(`
+		SELECT COUNT(*)
+		FROM refresh_tokens
+		WHERE token IN ('new token 1', 'new token 2')
+	`).Scan(&newTokenCount)
+	require.NoError(t, err)
+	require.Equal(t, 1, newTokenCount)
 }
 
 func TestRevokeAllRefreshTokens(t *testing.T) {
@@ -323,6 +371,18 @@ func createTestUser(userID int64, db *sql.DB) error {
 	_, err := db.Exec(insertSQL, userID, "test user", "pass", "user")
 	if err != nil {
 		return fmt.Errorf("failed to create test user: %w", err)
+	}
+	return nil
+}
+
+func UseRefreshToken(tokenID int, db *sql.DB) error {
+	_, err := db.Exec(`
+		UPDATE refresh_tokens
+		SET revoked = true
+		WHERE id = $1
+	`, tokenID)
+	if err != nil {
+		return fmt.Errorf("failed to update revoked: %w", err)
 	}
 	return nil
 }
