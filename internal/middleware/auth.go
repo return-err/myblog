@@ -43,7 +43,7 @@ func (m *Middleware) AuthMiddleware() gin.HandlerFunc {
 
 		claims, err := m.jwtService.ParseToken(tokenString)
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "求められる Token ではありません。"})
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "求められる Token ではありません"})
 			c.Abort()
 			return
 		}
