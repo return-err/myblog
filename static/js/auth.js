@@ -7,9 +7,11 @@ async function refreshAccessToken() {
     }
 
     const result = await response.json();
+    if (!result.token) {
+        return false;
+    }
 
     localStorage.setItem("token", result.access_token);
-
     return true;
 }
 
@@ -80,5 +82,8 @@ async function logout() {
         }
     } catch (error) {
         console.error("予期せぬエラーが発生しました:", error)
+    } finally {
+        localStorage.removeItem('token');
+        window.location.href = '/'
     }
 }
