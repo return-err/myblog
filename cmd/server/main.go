@@ -2,9 +2,9 @@ package main
 
 import (
 	"log"
-	"os"
 
 	"github.com/joho/godotenv"
+	"github.com/return-err/myblog/internal/config"
 	"github.com/return-err/myblog/internal/handle"
 	"github.com/return-err/myblog/internal/middleware"
 	"github.com/return-err/myblog/internal/repository"
@@ -15,7 +15,10 @@ import (
 func main() {
 	godotenv.Load()
 
-	secret := os.Getenv("JWT_SECRET")
+	secret, err := config.ValidateStartup()
+	if err != nil {
+		log.Fatalf("startup validation failed: %v", err)
+	}
 
 	db, err := repository.InitAPP()
 	if err != nil {

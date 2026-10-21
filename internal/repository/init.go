@@ -48,7 +48,7 @@ func NewDB() (*sql.DB, error) {
 
 	if err := db.Ping(); err != nil {
 		db.Close()
-		return nil, fmt.Errorf("データベースの接続に問題が起きました: %w", err)
+		return nil, fmt.Errorf("database connection failed: %w", err)
 	}
 	fmt.Println("PostgreSQL に接続済み")
 
