@@ -6,6 +6,8 @@ import (
 
 	"github.com/return-err/myblog/internal/apperror"
 	"github.com/return-err/myblog/internal/model"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type mockPostRepository struct {
@@ -15,6 +17,8 @@ type mockPostRepository struct {
 	DeletePostFunc    func(postID int64) error
 	CreatePostFunc    func(userID int64, title string, content string) error
 	EditPostFunc      func(postID int64, title string, content string) error
+
+	called bool
 }
 
 func (m *mockPostRepository) DeletePost(postID int64) error {
@@ -31,6 +35,11 @@ func (m *mockPostRepository) CreatePost(userID int64, title string, content stri
 
 func (m *mockPostRepository) EditPost(postID int64, title string, content string) error {
 	return m.EditPostFunc(postID, title, content)
+}
+
+func (m *mockPostRepository) GetTitleByUserID(userID int64, page, pageSize int) ([]model.ArticleSummary, int64, error) {
+	m.called = true
+	return []model.ArticleSummary{}, 0, nil
 }
 
 func TestValidateTitle(t *testing.T) {
@@ -174,5 +183,70 @@ func TestEditPost_Success(t *testing.T) {
 
 	if post.Content != "編集後" {
 		t.Errorf("expected %q, got %q", "編集後", post.Content)
+	}
+}
+
+func TestGetPostTitle(t *testing.T) {
+	tests := []struct {
+		name       string
+		userID     int64
+		page       int
+		pageSize   int
+		wantErr    bool
+		wantCalled bool
+	}{
+		{
+			name:       "success",
+			userID:     100,
+			page:       1,
+			pageSize:   20,
+			wantErr:    false,
+			wantCalled: true,
+		},
+		{
+			name:       "invalid userID",
+			userID:     -100,
+			page:       1,
+			pageSize:   20,
+			wantErr:    true,
+			wantCalled: false,
+		},
+		{
+			name:       "invalid page",
+			userID:     100,
+			page:       -1,
+			pageSize:   20,
+			wantErr:    false,
+			wantCalled: true,
+		},
+		{
+			name:       "invalid page size",
+			userID:     100,
+			page:       1,
+			pageSize:   0,
+			wantErr:    false,
+			wantCalled: true,
+		},
+		{
+			name:       "invalid page size (too big)",
+			userID:     100,
+			page:       1,
+			pageSize:   101,
+			wantErr:    false,
+			wantCalled: true,
+		},
+	}
+	for _, tt := range tests {
+		mockService := NewPostService(&mockPostRepository{called: false})
+		t.Run(tt.name, func(t *testing.T) {
+			_, _, err := mockService.GetPostTitle(tt.userID, tt.page, tt.pageSize)
+			if tt.wantErr {
+				require.Error(t, err)
+				assert.False(t, tt.wantCalled)
+			} else {
+				require.NoError(t, err)
+				assert.True(t, tt.wantCalled)
+			}
+		})
 	}
 }
