@@ -64,7 +64,7 @@ func (s *PostService) GetPostTitle(userID int64, page, pageSize int) ([]model.Ar
 func (s *PostService) PostDetail(postID int64) (model.PostDetail, error) {
 	post, err := s.repo.GetPostDetail(postID)
 	if err != nil {
-		return model.PostDetail{}, nil
+		return model.PostDetail{}, apperror.ErrPostNotFound
 	}
 
 	if post.DisplayName == nil || *post.DisplayName == "" {
@@ -106,6 +106,12 @@ func (s *PostService) EditPost(postID, userID int64, title, content, userRole st
 }
 
 func (s *PostService) GetAllPosts(page, pageSize int) ([]model.ArticleSummary, int64, error) {
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 || pageSize > 100 {
+		pageSize = 10
+	}
 	return s.repo.GetAllPosts(page, pageSize)
 }
 

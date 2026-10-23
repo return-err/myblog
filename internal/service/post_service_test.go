@@ -42,6 +42,14 @@ func (m *mockPostRepository) GetTitleByUserID(userID int64, page, pageSize int) 
 	return []model.ArticleSummary{}, 0, nil
 }
 
+func (m *mockPostRepository) GetAllPosts(page, pageSize int) ([]model.ArticleSummary, int64, error) {
+	m.called = true
+	if page < 1 || pageSize < 1 || pageSize > 100 {
+		return []model.ArticleSummary{}, 0, errors.New("invalid input")
+	}
+	return []model.ArticleSummary{}, 0, nil
+}
+
 func TestValidateTitle(t *testing.T) {
 	testCases := []string{"", " ", "\n", "  \n"}
 	for _, tc := range testCases {
@@ -247,6 +255,43 @@ func TestGetPostTitle(t *testing.T) {
 				require.NoError(t, err)
 				assert.True(t, tt.wantCalled)
 			}
+		})
+	}
+}
+
+func TestGetAllPosts(t *testing.T) {
+	tests := []struct {
+		name       string
+		page       int
+		pageSize   int
+		wantCalled bool
+	}{
+		{
+			name:       "success",
+			page:       1,
+			pageSize:   10,
+			wantCalled: true,
+		},
+		{
+			name:       "invalid page",
+			page:       -1,
+			pageSize:   20,
+			wantCalled: true,
+		},
+		{
+			name:       "invalid page size",
+			page:       1,
+			pageSize:   0,
+			wantCalled: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockRepo := &mockPostRepository{}
+			mockService := NewPostService(mockRepo)
+			_, _, err := mockService.GetAllPosts(tt.page, tt.pageSize)
+			require.NoError(t, err)
+			assert.True(t, tt.wantCalled)
 		})
 	}
 }
