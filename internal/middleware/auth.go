@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"net/http"
 	"strconv"
 	"strings"
 
@@ -27,14 +26,14 @@ func (m *Middleware) AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization が見つかりませんでした。"})
+			handle.RespondWithError(c, apperror.ErrMissingToken)
 			c.Abort()
 			return
 		}
 
 		parts := strings.SplitN(authHeader, " ", 2)
 		if len(parts) != 2 || parts[0] != "Bearer" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "求められる Token ではありません。"})
+			handle.RespondWithError(c, apperror.ErrInvalidToken)
 			c.Abort()
 			return
 		}
@@ -43,21 +42,21 @@ func (m *Middleware) AuthMiddleware() gin.HandlerFunc {
 
 		claims, err := m.jwtService.ParseToken(tokenString)
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "求められる Token ではありません"})
+			handle.RespondWithError(c, apperror.ErrInvalidToken)
 			c.Abort()
 			return
 		}
 
 		userID, err := strconv.ParseInt(claims.Subject, 10, 64)
 		if err != nil {
-			handle.RespondWithError(c, err)
+			handle.RespondWithError(c, apperror.ErrInvalidToken)
 			c.Abort()
 			return
 		}
 
 		dbTokenVersion, err := m.authRepo.GetTokenVersionByUserID(userID)
 		if err != nil || claims.TokenVersion != dbTokenVersion {
-			handle.RespondWithError(c, apperror.ErrUnauthorized)
+			handle.RespondWithError(c, apperror.ErrDatabase)
 			c.Abort()
 			return
 		}
@@ -72,14 +71,14 @@ func (m *Middleware) RequireRole(requiredRole string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		roleVal, exists := c.Get("role")
 		if !exists {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "認証情報が見つかりません。"})
+			handle.RespondWithError(c, apperror.ErrUnauthorized)
 			c.Abort()
 			return
 		}
 
 		role, ok := roleVal.(string)
 		if !ok || role != requiredRole {
-			c.JSON(http.StatusForbidden, gin.H{"error": "アクセス権限がありません。"})
+			handle.RespondWithError(c, apperror.ErrForbidden)
 			c.Abort()
 			return
 		}
