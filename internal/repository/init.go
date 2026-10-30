@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 	migrator "github.com/return-err/myblog/db"
@@ -45,6 +46,10 @@ func NewDB() (*sql.DB, error) {
 	if err != nil {
 		return nil, fmt.Errorf("データベースを開く際にエラーが発生しました: %w", err)
 	}
+
+	db.SetMaxOpenConns(25)
+	db.SetMaxIdleConns(10)
+	db.SetConnMaxLifetime(5 * time.Minute)
 
 	if err := db.Ping(); err != nil {
 		db.Close()
