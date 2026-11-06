@@ -37,7 +37,7 @@ func main() {
 	authRepo := repository.NewAuthRepository(db)
 	authService := service.NewAuthService(authRepo, jwtService)
 	authHandle := handle.NewAuthHandle(authService)
-	middleware := middleware.NewMiddleware(jwtService, authRepo)
+	mw := middleware.NewMiddleware(jwtService, authRepo)
 
 	postRepo := repository.NewPostRepository(db)
 	postService := service.NewPostService(postRepo)
@@ -47,11 +47,12 @@ func main() {
 	userService := service.NewUserService(userRepo)
 	userHandle := handle.NewUserHandle(userService)
 
-	r := router.SetupRouter(authHandle, postHandle, middleware, userHandle)
+	r := router.SetupRouter(authHandle, postHandle, mw, userHandle)
 
 	srv := &http.Server{
-		Addr:    ":8080",
-		Handler: r,
+		Addr:              ":8080",
+		Handler:           r,
+		ReadHeaderTimeout: 5 * time.Second,
 	}
 
 	go func() {
@@ -63,12 +64,12 @@ func main() {
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
 	<-quit
-	log.Println("Turnning off service...")
+	log.Println("Turning off service...")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	if err := srv.Shutdown(ctx); err != nil {
-		log.Fatalf("Force down: %v", err)
+		log.Printf("Force down: %v", err)
 	}
 	log.Println("Exited")
 }
