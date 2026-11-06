@@ -1,7 +1,13 @@
 package main
 
 import (
+	"context"
 	"log"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/joho/godotenv"
 	"github.com/return-err/myblog/internal/config"
@@ -31,7 +37,7 @@ func main() {
 	authRepo := repository.NewAuthRepository(db)
 	authService := service.NewAuthService(authRepo, jwtService)
 	authHandle := handle.NewAuthHandle(authService)
-	middleware := middleware.NewMiddleware(jwtService, authRepo)
+	mw := middleware.NewMiddleware(jwtService, authRepo)
 
 	postRepo := repository.NewPostRepository(db)
 	postService := service.NewPostService(postRepo)
@@ -41,7 +47,29 @@ func main() {
 	userService := service.NewUserService(userRepo)
 	userHandle := handle.NewUserHandle(userService)
 
-	r := router.SetupRouter(authHandle, postHandle, middleware, userHandle)
+	r := router.SetupRouter(authHandle, postHandle, mw, userHandle)
 
-	r.Run(":8080")
+	srv := &http.Server{
+		Addr:              ":8080",
+		Handler:           r,
+		ReadHeaderTimeout: 5 * time.Second,
+	}
+
+	go func() {
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("listen: %v", err)
+		}
+	}()
+
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
+	<-quit
+	log.Println("Turning off service...")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := srv.Shutdown(ctx); err != nil {
+		log.Printf("Force down: %v", err)
+	}
+	log.Println("Exited")
 }
