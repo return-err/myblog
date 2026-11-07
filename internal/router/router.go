@@ -9,7 +9,7 @@ import (
 	"golang.org/x/time/rate"
 )
 
-func SetupRouter(authHandle *handle.AuthHandle, postHandle *handle.PostHandle, mw *middleware.Middleware, userHandle *handle.UserHandle) *gin.Engine {
+func SetupRouter(authHandle *handle.AuthHandle, postHandle *handle.PostHandle, mw *middleware.Middleware, userHandle *handle.UserHandle, healthHandle *handle.HealthHandle) *gin.Engine {
 	r := gin.Default()
 
 	loginLimiter := middleware.NewIPLimiter(rate.Every(10*time.Second), 10)
@@ -47,6 +47,9 @@ func SetupRouter(authHandle *handle.AuthHandle, postHandle *handle.PostHandle, m
 	r.GET("/admin/users", func(ctx *gin.Context) {
 		ctx.File("templates/admin_users.html")
 	})
+
+	r.GET("/healthz", healthHandle.Healthz)
+	r.GET("/readyz", healthHandle.Readyz)
 
 	api := r.Group("/api")
 	{
