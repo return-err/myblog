@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -156,6 +157,10 @@ func (r *PostRepository) SearchPost(keyword string) ([]model.ArticleSummary, err
 	}
 
 	return posts, nil
+}
+
+func (r *PostRepository) Ping(ctx context.Context) error {
+	return r.db.PingContext(ctx)
 }
 
 func scanArticleSummaries(rows *sql.Rows) ([]model.ArticleSummary, error) {

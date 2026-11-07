@@ -47,7 +47,8 @@ func main() {
 	userService := service.NewUserService(userRepo)
 	userHandle := handle.NewUserHandle(userService)
 
-	r := router.SetupRouter(authHandle, postHandle, mw, userHandle)
+	healthHandle := handle.NewHealthHandle(postRepo)
+	r := router.SetupRouter(authHandle, postHandle, mw, userHandle, healthHandle)
 
 	srv := &http.Server{
 		Addr:              ":8080",
