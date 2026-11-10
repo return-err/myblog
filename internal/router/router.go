@@ -10,7 +10,10 @@ import (
 )
 
 func SetupRouter(authHandle *handle.AuthHandle, postHandle *handle.PostHandle, mw *middleware.Middleware, userHandle *handle.UserHandle, healthHandle *handle.HealthHandle) *gin.Engine {
-	r := gin.Default()
+	r := gin.New()
+	r.Use(middleware.RequestID())
+	r.Use(gin.LoggerWithFormatter(middleware.LogFormat))
+	r.Use(gin.Recovery())
 
 	loginLimiter := middleware.NewIPLimiter(rate.Every(10*time.Second), 10)
 
