@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -20,15 +20,18 @@ import (
 
 func main() {
 	godotenv.Load()
+	setupLogger()
 
 	secret, err := config.ValidateStartup()
 	if err != nil {
-		log.Fatalf("startup validation failed: %v", err)
+		slog.Error("startup validation failed", "err", err)
+		os.Exit(1)
 	}
 
 	db, err := repository.InitAPP()
 	if err != nil {
-		log.Fatalln("データベース初期化失敗:", err)
+		slog.Error("failed to initialize database", "err", err)
+		os.Exit(1)
 	}
 	defer db.Close()
 
@@ -58,19 +61,26 @@ func main() {
 
 	go func() {
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("listen: %v", err)
+			slog.Error("server listen failed", "err", err)
+			os.Exit(1)
 		}
 	}()
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
 	<-quit
-	log.Println("Turning off service...")
+	slog.Info("shutting down")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	if err := srv.Shutdown(ctx); err != nil {
-		log.Printf("Force down: %v", err)
+		slog.Error("forced server shutdown", "err", err)
 	}
-	log.Println("Exited")
+	slog.Info("Exited")
+}
+
+func setupLogger() {
+	jsonHandler := slog.NewJSONHandler(os.Stdout, nil)
+	myLogger := slog.New(jsonHandler)
+	slog.SetDefault(myLogger)
 }

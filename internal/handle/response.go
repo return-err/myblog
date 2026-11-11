@@ -2,7 +2,7 @@ package handle
 
 import (
 	"errors"
-	"log"
+	"log/slog"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -67,7 +67,7 @@ func RespondWithError(c *gin.Context, err error) {
 
 	// 500 Internal Server Error
 	default:
-		log.Printf("[Internal Server Error] %v", err)
+		slog.Error("internal server error", "err", err)
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "internal server error",
 		})
