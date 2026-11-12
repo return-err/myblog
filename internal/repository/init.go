@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
-	"os"
 	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
@@ -13,8 +12,8 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-func InitAPP(cfg config.DBConfig) (*sql.DB, error) {
-	db, err := NewDB(cfg)
+func InitAPP(cfg *config.Config) (*sql.DB, error) {
+	db, err := NewDB(cfg.DB)
 	if err != nil {
 		return nil, err
 	}
@@ -25,7 +24,7 @@ func InitAPP(cfg config.DBConfig) (*sql.DB, error) {
 		return nil, err
 	}
 
-	err = initAdmin(db)
+	err = initAdmin(db, cfg.Admin)
 	if err != nil {
 		db.Close()
 		return nil, err
@@ -55,7 +54,7 @@ func NewDB(cfg config.DBConfig) (*sql.DB, error) {
 	return db, nil
 }
 
-func initAdmin(db *sql.DB) error {
+func initAdmin(db *sql.DB, adminCfg config.AdminConfig) error {
 	var count int
 	selectSQL := `SELECT COUNT(*) FROM users WHERE role = 'admin'`
 
@@ -66,8 +65,8 @@ func initAdmin(db *sql.DB) error {
 	}
 
 	if count == 0 {
-		defaultUsername := os.Getenv("INITIAL_ADMIN_USER")
-		defaultPassword := os.Getenv("INITIAL_ADMIN_PASS")
+		defaultUsername := adminCfg.Username
+		defaultPassword := adminCfg.Password
 
 		passwordHash, err := bcrypt.GenerateFromPassword([]byte(defaultPassword), 4)
 		if err != nil {

@@ -19,7 +19,7 @@ func main() {
 		log.Fatalf("startup validation failed: %v", err)
 	}
 
-	db, err := repository.InitAPP(cfg.DB)
+	db, err := repository.InitAPP(cfg)
 	if err != nil {
 		log.Fatal(err)
 	}

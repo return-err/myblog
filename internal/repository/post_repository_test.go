@@ -14,7 +14,7 @@ func TestCreatePost(t *testing.T) {
 		resetTable(t)
 		defer resetTable(t)
 
-		err := initAdmin(testDB)
+		err := initAdmin(testDB, testAdmin)
 		require.NoError(t, err)
 		err = repo.CreatePost(1, "test", "")
 		require.NoError(t, err)
@@ -112,7 +112,7 @@ func TestGetPostDetail(t *testing.T) {
 	resetTable(t)
 	defer resetTable(t)
 	postRepo := NewPostRepository(testDB)
-	err := initAdmin(testDB) // デフォルト DisplayName: ユーザー1
+	err := initAdmin(testDB, testAdmin) // デフォルト DisplayName: ユーザー1
 	require.NoError(t, err)
 	err = postRepo.CreatePost(1, "test", "")
 	require.NoError(t, err)
@@ -137,7 +137,7 @@ func TestDeletePost(t *testing.T) {
 		resetTable(t)
 		defer resetTable(t)
 
-		err := initAdmin(testDB)
+		err := initAdmin(testDB, testAdmin)
 		require.NoError(t, err)
 		err = postRepo.CreatePost(1, "test", "")
 		require.NoError(t, err)
@@ -167,7 +167,7 @@ func TestEditPost(t *testing.T) {
 		resetTable(t)
 		defer resetTable(t)
 
-		err := initAdmin(testDB)
+		err := initAdmin(testDB, testAdmin)
 		require.NoError(t, err)
 		err = postRepo.CreatePost(1, "編集前", "編集前コンテンツ")
 		require.NoError(t, err)
@@ -199,7 +199,7 @@ func TestGetAllPosts(t *testing.T) {
 	resetTable(t)
 	defer resetTable(t)
 
-	err := initAdmin(testDB)
+	err := initAdmin(testDB, testAdmin)
 	require.NoError(t, err)
 	postRepo := NewPostRepository(testDB)
 
@@ -266,7 +266,7 @@ func TestGetAllPosts(t *testing.T) {
 func TestSearchPost(t *testing.T) {
 	resetTable(t)
 	defer resetTable(t)
-	initAdmin(testDB)
+	initAdmin(testDB, testAdmin)
 	postRepo := NewPostRepository(testDB)
 
 	titles := []string{"post1", "post2", "post3", "post4", "post5"}

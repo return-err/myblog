@@ -14,6 +14,11 @@ type DBConfig struct {
 	Name     string
 }
 
+type AdminConfig struct {
+	Username string
+	Password string
+}
+
 type Config struct {
 	JWTSecret string
 	// Port       string
@@ -22,8 +27,7 @@ type Config struct {
 	DB DBConfig
 	// AccessTTL  time.Duration
 	// RefreshTTL time.Duration
-	// AdminUser  string
-	// AdminPass  string
+	Admin AdminConfig
 }
 
 func Load() (*Config, error) {
@@ -59,6 +63,10 @@ func Load() (*Config, error) {
 			User:     os.Getenv("DB_USER"),
 			Password: os.Getenv("DB_PASSWORD"),
 			Name:     os.Getenv("DB_NAME"),
+		},
+		Admin: AdminConfig{
+			Username: os.Getenv("INITIAL_ADMIN_USER"),
+			Password: os.Getenv("INITIAL_ADMIN_PASS"),
 		},
 	}, nil
 }

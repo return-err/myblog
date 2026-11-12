@@ -67,7 +67,7 @@ func TestGetUserByUsername(t *testing.T) {
 		resetTable(t)
 		defer resetTable(t)
 
-		err := initAdmin(testDB)
+		err := initAdmin(testDB, testAdmin)
 		require.NoError(t, err)
 
 		user, err := repo.GetUserByUsername("admin")
@@ -95,7 +95,7 @@ func TestGetRoleUserID(t *testing.T) {
 		resetTable(t)
 		defer resetTable(t)
 
-		err := initAdmin(testDB)
+		err := initAdmin(testDB, testAdmin)
 		require.NoError(t, err)
 		role, err := repo.GetRoleByUserID(1)
 		require.NoError(t, err)
