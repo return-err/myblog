@@ -22,7 +22,7 @@ func main() {
 	godotenv.Load()
 	setupLogger()
 
-	secret, err := config.ValidateStartup()
+	cfg, err := config.Load()
 	if err != nil {
 		slog.Error("startup validation failed", "err", err)
 		os.Exit(1)
@@ -35,7 +35,7 @@ func main() {
 	}
 	defer db.Close()
 
-	jwtService := service.NewJWTService(secret)
+	jwtService := service.NewJWTService(cfg.JWTSecret)
 
 	authRepo := repository.NewAuthRepository(db)
 	authService := service.NewAuthService(authRepo, jwtService)

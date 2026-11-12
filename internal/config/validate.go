@@ -6,18 +6,19 @@ import (
 	"strings"
 )
 
-// type Config struct {
-// 	Port       string
-// 	LogFormat  string
-// 	JWTSecret  string
-// 	DB         DBConfig
-// 	AccessTTL  time.Duration
-// 	RefreshTTL time.Duration
-// 	AdminUser  string
-// 	AdminPass  string
-// }
+type Config struct {
+	JWTSecret string
+	// Port       string
+	// LogFormat  string
+	// JWTSecret  string
+	// DB         DBConfig
+	// AccessTTL  time.Duration
+	// RefreshTTL time.Duration
+	// AdminUser  string
+	// AdminPass  string
+}
 
-func ValidateStartup() (string, error) {
+func Load() (*Config, error) {
 	require := []string{
 		"JWT_SECRET",
 		"DB_HOST",
@@ -30,22 +31,17 @@ func ValidateStartup() (string, error) {
 	}
 	for _, key := range require {
 		if strings.TrimSpace(os.Getenv(key)) == "" {
-			return "", fmt.Errorf("%s is required", key)
+			return nil, fmt.Errorf("%s is required", key)
 		}
 	}
 
 	secret := os.Getenv("JWT_SECRET")
 	if len(secret) < 16 {
-		return "", fmt.Errorf("JWT_SECRET must be at least 16 bytes")
+		return nil, fmt.Errorf("JWT_SECRET must be at least 16 bytes")
 	}
 	if secret == "secret-key" {
-		return "", fmt.Errorf("JWT_SECRET must not use a default value")
+		return nil, fmt.Errorf("JWT_SECRET must not use a default value")
 	}
 
-	DBPass := strings.TrimSpace(os.Getenv("DB_PASSWORD"))
-	if DBPass == "" {
-		return "", fmt.Errorf("DB_PASSWORD is required")
-	}
-
-	return secret, nil
+	return &Config{JWTSecret: secret}, nil
 }

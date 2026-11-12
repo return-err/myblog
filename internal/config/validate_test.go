@@ -83,12 +83,13 @@ func TestValidateStartup(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.setup(t)
-			secret, err := ValidateStartup()
+			cfg, err := Load()
 			if tt.wantErr != "" {
 				require.Error(t, err)
-				assert.Equal(t, "", secret)
+				assert.Nil(t, cfg)
 			} else {
 				require.NoError(t, err)
+				assert.Equal(t, "test-secret-key-for-unit-tests-123456", cfg.JWTSecret)
 			}
 		})
 	}
