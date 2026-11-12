@@ -15,6 +15,7 @@ func setValidEnv(t *testing.T) {
 		"DB_HOST":            "localhost",
 		"DB_PORT":            "5432",
 		"DB_USER":            "testuser",
+		"DB_PASSWORD":        "test-db-password",
 		"DB_NAME":            "testdb",
 		"INITIAL_ADMIN_USER": "testadmin",
 		"INITIAL_ADMIN_PASS": "test-password-123",
@@ -44,7 +45,7 @@ func TestValidateStartup(t *testing.T) {
 				setValidEnv(t)
 				t.Setenv("JWT_SECRET", "")
 			},
-			wantErr: "JWT_SECRT is required",
+			wantErr: "JWT_SECRET is required",
 		},
 		{
 			name: "short JWT_SECRET",
@@ -69,6 +70,14 @@ func TestValidateStartup(t *testing.T) {
 				t.Setenv("INITIAL_ADMIN_PASS", "")
 			},
 			wantErr: "INITIAL_ADMIN_PASS is required",
+		},
+		{
+			name: "missing database password",
+			setup: func(t *testing.T) {
+				setValidEnv(t)
+				t.Setenv("DB_PASSWORD", "")
+			},
+			wantErr: "DB_PASSWORD is required",
 		},
 	}
 	for _, tt := range tests {
