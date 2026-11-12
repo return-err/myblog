@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/moby/moby/api/types/network"
+	"github.com/return-err/myblog/internal/config"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
@@ -18,7 +19,7 @@ import (
 
 var testDB *sql.DB
 
-func setupTestDB(ctx context.Context) (func(), error) {
+func setupTestDB(ctx context.Context) (func(), config.DBConfig, error) {
 	pgContainer, err := postgres.Run(ctx,
 		"postgres:16-alpine",
 		postgres.WithDatabase("testdb"),
@@ -37,7 +38,7 @@ func setupTestDB(ctx context.Context) (func(), error) {
 		),
 	)
 	if err != nil {
-		return nil, fmt.Errorf("Postgres コンテナー起動できませんでした: %w", err)
+		return nil, config.DBConfig{}, fmt.Errorf("Postgres コンテナー起動できませんでした: %w", err)
 	}
 
 	host, _ := pgContainer.Host(ctx)
@@ -52,20 +53,26 @@ func setupTestDB(ctx context.Context) (func(), error) {
 	os.Setenv("INITIAL_ADMIN_PASS", "admin1234")
 
 	return func() {
-		if err := pgContainer.Terminate(ctx); err != nil {
-			log.Fatalf("クリアできませんでした: %v", err)
-		}
-	}, nil
+			if err := pgContainer.Terminate(ctx); err != nil {
+				log.Fatalf("クリアできませんでした: %v", err)
+			}
+		}, config.DBConfig{
+			Host:     os.Getenv("DB_HOST"),
+			Port:     os.Getenv("DB_PORT"),
+			User:     os.Getenv("DB_USER"),
+			Password: os.Getenv("DB_PASSWORD"),
+			Name:     os.Getenv("DB_NAME"),
+		}, nil
 }
 
 func TestMain(m *testing.M) {
 	ctx := context.Background()
-	teardown, err := setupTestDB(ctx)
+	teardown, cfg, err := setupTestDB(ctx)
 	if err != nil {
 		log.Fatalf("Test container 起動できませんでした: %v", err)
 	}
 
-	testDB, err = InitAPP()
+	testDB, err = InitAPP(cfg)
 	if err != nil {
 		teardown()
 		log.Fatalf("テストデータベース初期化できませんでした: %v", err)

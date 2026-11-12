@@ -7,12 +7,19 @@ import (
 	"time"
 
 	"github.com/joho/godotenv"
+	"github.com/return-err/myblog/internal/config"
 	"github.com/return-err/myblog/internal/repository"
 )
 
 func main() {
 	godotenv.Load()
-	db, err := repository.InitAPP()
+
+	cfg, err := config.Load()
+	if err != nil {
+		log.Fatalf("startup validation failed: %v", err)
+	}
+
+	db, err := repository.InitAPP(cfg.DB)
 	if err != nil {
 		log.Fatal(err)
 	}

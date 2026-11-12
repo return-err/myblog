@@ -28,7 +28,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	db, err := repository.InitAPP()
+	db, err := repository.InitAPP(cfg.DB)
 	if err != nil {
 		slog.Error("failed to initialize database", "err", err)
 		os.Exit(1)

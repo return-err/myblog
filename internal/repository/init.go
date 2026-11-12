@@ -9,11 +9,12 @@ import (
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 	migrator "github.com/return-err/myblog/db"
+	"github.com/return-err/myblog/internal/config"
 	"golang.org/x/crypto/bcrypt"
 )
 
-func InitAPP() (*sql.DB, error) {
-	db, err := NewDB()
+func InitAPP(cfg config.DBConfig) (*sql.DB, error) {
+	db, err := NewDB(cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -33,14 +34,8 @@ func InitAPP() (*sql.DB, error) {
 	return db, nil
 }
 
-func NewDB() (*sql.DB, error) {
-	host := os.Getenv("DB_HOST")
-	port := os.Getenv("DB_PORT")
-	user := os.Getenv("DB_USER")
-	password := os.Getenv("DB_PASSWORD")
-	dbname := os.Getenv("DB_NAME")
-
-	connStr := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable", host, port, user, password, dbname)
+func NewDB(cfg config.DBConfig) (*sql.DB, error) {
+	connStr := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable", cfg.Host, cfg.Port, cfg.User, cfg.Password, cfg.Name)
 
 	db, err := sql.Open("pgx", connStr)
 	if err != nil {

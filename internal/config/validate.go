@@ -6,12 +6,20 @@ import (
 	"strings"
 )
 
+type DBConfig struct {
+	Host     string
+	Port     string
+	User     string
+	Password string
+	Name     string
+}
+
 type Config struct {
 	JWTSecret string
 	// Port       string
 	// LogFormat  string
 	// JWTSecret  string
-	// DB         DBConfig
+	DB DBConfig
 	// AccessTTL  time.Duration
 	// RefreshTTL time.Duration
 	// AdminUser  string
@@ -43,5 +51,14 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("JWT_SECRET must not use a default value")
 	}
 
-	return &Config{JWTSecret: secret}, nil
+	return &Config{
+		JWTSecret: secret,
+		DB: DBConfig{
+			Host:     os.Getenv("DB_HOST"),
+			Port:     os.Getenv("DB_PORT"),
+			User:     os.Getenv("DB_USER"),
+			Password: os.Getenv("DB_PASSWORD"),
+			Name:     os.Getenv("DB_NAME"),
+		},
+	}, nil
 }
