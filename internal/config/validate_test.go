@@ -28,16 +28,19 @@ func setValidEnv(t *testing.T) {
 
 func TestValidateStartup(t *testing.T) {
 	tests := []struct {
-		name    string
-		setup   func(t *testing.T)
-		wantErr string
+		name     string
+		setup    func(t *testing.T)
+		wantErr  string
+		wantPort string
 	}{
 		{
 			name: "valid environment",
 			setup: func(t *testing.T) {
 				setValidEnv(t)
+				t.Setenv("PORT", "")
 			},
-			wantErr: "",
+			wantErr:  "",
+			wantPort: "8080",
 		},
 		{
 			name: "missing JWT_SECRET",
@@ -79,6 +82,31 @@ func TestValidateStartup(t *testing.T) {
 			},
 			wantErr: "DB_PASSWORD is required",
 		},
+		{
+			name: "custom port",
+			setup: func(t *testing.T) {
+				setValidEnv(t)
+				t.Setenv("PORT", "9090")
+			},
+			wantErr:  "",
+			wantPort: "9090",
+		},
+		{
+			name: "non-numeric PORT",
+			setup: func(t *testing.T) {
+				setValidEnv(t)
+				t.Setenv("PORT", "abc")
+			},
+			wantErr: `POST must be an integer between 1 and 65535, got "abc"`,
+		},
+		{
+			name: "PORT out of range",
+			setup: func(t *testing.T) {
+				setValidEnv(t)
+				t.Setenv("PORT", "70000")
+			},
+			wantErr: `POST must be an integer between 1 and 65535, got "70000"`,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -86,10 +114,12 @@ func TestValidateStartup(t *testing.T) {
 			cfg, err := Load()
 			if tt.wantErr != "" {
 				require.Error(t, err)
+				assert.EqualError(t, err, tt.wantErr)
 				assert.Nil(t, cfg)
 			} else {
 				require.NoError(t, err)
 				assert.Equal(t, "test-secret-key-for-unit-tests-123456", cfg.JWTSecret)
+				assert.Equal(t, tt.wantPort, cfg.Port)
 			}
 		})
 	}

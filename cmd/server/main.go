@@ -54,7 +54,7 @@ func main() {
 	r := router.SetupRouter(authHandle, postHandle, mw, userHandle, healthHandle)
 
 	srv := &http.Server{
-		Addr:              ":8080",
+		Addr:              ":" + cfg.Port,
 		Handler:           r,
 		ReadHeaderTimeout: 5 * time.Second,
 	}

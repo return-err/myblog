@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -20,11 +21,10 @@ type AdminConfig struct {
 }
 
 type Config struct {
-	JWTSecret string
-	// Port       string
+	Port string
 	// LogFormat  string
-	// JWTSecret  string
-	DB DBConfig
+	JWTSecret string
+	DB        DBConfig
 	// AccessTTL  time.Duration
 	// RefreshTTL time.Duration
 	Admin AdminConfig
@@ -47,6 +47,16 @@ func Load() (*Config, error) {
 		}
 	}
 
+	port := strings.TrimSpace(os.Getenv("PORT"))
+	if port == "" {
+		port = "8080"
+	}
+	n, err := strconv.Atoi(port)
+	if err != nil || n < 1 || n > 65535 {
+		return nil, fmt.Errorf("POST must be an integer between 1 and 65535, got %q", port)
+	}
+	port = strconv.Itoa(n)
+
 	secret := os.Getenv("JWT_SECRET")
 	if len(secret) < 16 {
 		return nil, fmt.Errorf("JWT_SECRET must be at least 16 bytes")
@@ -56,6 +66,7 @@ func Load() (*Config, error) {
 	}
 
 	return &Config{
+		Port:      port,
 		JWTSecret: secret,
 		DB: DBConfig{
 			Host:     os.Getenv("DB_HOST"),
