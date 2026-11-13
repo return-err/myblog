@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -20,13 +21,14 @@ import (
 
 func main() {
 	godotenv.Load()
-	setupLogger()
 
 	cfg, err := config.Load()
 	if err != nil {
 		slog.Error("startup validation failed", "err", err)
 		os.Exit(1)
 	}
+
+	setupLogger(cfg.LogFormat)
 
 	db, err := repository.InitAPP(cfg)
 	if err != nil {
@@ -54,7 +56,7 @@ func main() {
 	r := router.SetupRouter(authHandle, postHandle, mw, userHandle, healthHandle)
 
 	srv := &http.Server{
-		Addr:              ":" + cfg.Port,
+		Addr:              fmt.Sprintf(":%d", cfg.Port),
 		Handler:           r,
 		ReadHeaderTimeout: 5 * time.Second,
 	}
@@ -79,8 +81,13 @@ func main() {
 	slog.Info("Exited")
 }
 
-func setupLogger() {
-	jsonHandler := slog.NewJSONHandler(os.Stdout, nil)
-	myLogger := slog.New(jsonHandler)
-	slog.SetDefault(myLogger)
+func setupLogger(format string) {
+	var handler slog.Handler
+	if format == "text" {
+		handler = slog.NewTextHandler(os.Stdout, nil)
+	} else {
+		handler = slog.NewJSONHandler(os.Stdout, nil)
+	}
+
+	slog.SetDefault(slog.New(handler))
 }

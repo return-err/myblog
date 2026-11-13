@@ -28,10 +28,11 @@ func setValidEnv(t *testing.T) {
 
 func TestValidateStartup(t *testing.T) {
 	tests := []struct {
-		name     string
-		setup    func(t *testing.T)
-		wantErr  string
-		wantPort string
+		name          string
+		setup         func(t *testing.T)
+		wantErr       string
+		wantPort      int
+		wantLogFormat string
 	}{
 		{
 			name: "valid environment",
@@ -39,8 +40,9 @@ func TestValidateStartup(t *testing.T) {
 				setValidEnv(t)
 				t.Setenv("PORT", "")
 			},
-			wantErr:  "",
-			wantPort: "8080",
+			wantErr:       "",
+			wantPort:      8080,
+			wantLogFormat: "json",
 		},
 		{
 			name: "missing JWT_SECRET",
@@ -88,8 +90,9 @@ func TestValidateStartup(t *testing.T) {
 				setValidEnv(t)
 				t.Setenv("PORT", "9090")
 			},
-			wantErr:  "",
-			wantPort: "9090",
+			wantErr:       "",
+			wantPort:      9090,
+			wantLogFormat: "json",
 		},
 		{
 			name: "non-numeric PORT",
@@ -97,7 +100,7 @@ func TestValidateStartup(t *testing.T) {
 				setValidEnv(t)
 				t.Setenv("PORT", "abc")
 			},
-			wantErr: `POST must be an integer between 1 and 65535, got "abc"`,
+			wantErr: "PORT must be an integer between 1 and 65535, got \"abc\"",
 		},
 		{
 			name: "PORT out of range",
@@ -105,7 +108,37 @@ func TestValidateStartup(t *testing.T) {
 				setValidEnv(t)
 				t.Setenv("PORT", "70000")
 			},
-			wantErr: `POST must be an integer between 1 and 65535, got "70000"`,
+			wantErr: "PORT must be an integer between 1 and 65535, got \"70000\"",
+		},
+		{
+			name: "text log format",
+			setup: func(t *testing.T) {
+				setValidEnv(t)
+				t.Setenv("PORT", "")
+				t.Setenv("LOG_FORMAT", "text")
+			},
+			wantErr:       "",
+			wantPort:      8080,
+			wantLogFormat: "text",
+		},
+		{
+			name: "log format is case-insensitive",
+			setup: func(t *testing.T) {
+				setValidEnv(t)
+				t.Setenv("PORT", "")
+				t.Setenv("LOG_FORMAT", "TEXT")
+			},
+			wantErr:       "",
+			wantPort:      8080,
+			wantLogFormat: "text",
+		},
+		{
+			name: "invalid LOG_FORMAT",
+			setup: func(t *testing.T) {
+				setValidEnv(t)
+				t.Setenv("LOG_FORMAT", "xml")
+			},
+			wantErr: "LOG_FORMAT must be \"json\" or \"text\", got \"xml\"",
 		},
 	}
 	for _, tt := range tests {
@@ -120,6 +153,7 @@ func TestValidateStartup(t *testing.T) {
 				require.NoError(t, err)
 				assert.Equal(t, "test-secret-key-for-unit-tests-123456", cfg.JWTSecret)
 				assert.Equal(t, tt.wantPort, cfg.Port)
+				assert.Equal(t, tt.wantLogFormat, cfg.LogFormat)
 			}
 		})
 	}

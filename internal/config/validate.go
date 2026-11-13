@@ -21,8 +21,8 @@ type AdminConfig struct {
 }
 
 type Config struct {
-	Port string
-	// LogFormat  string
+	Port      int
+	LogFormat string
 	JWTSecret string
 	DB        DBConfig
 	// AccessTTL  time.Duration
@@ -47,15 +47,22 @@ func Load() (*Config, error) {
 		}
 	}
 
-	port := strings.TrimSpace(os.Getenv("PORT"))
-	if port == "" {
-		port = "8080"
+	portStr := strings.TrimSpace(os.Getenv("PORT"))
+	if portStr == "" {
+		portStr = "8080"
 	}
-	n, err := strconv.Atoi(port)
-	if err != nil || n < 1 || n > 65535 {
-		return nil, fmt.Errorf("POST must be an integer between 1 and 65535, got %q", port)
+	port, err := strconv.Atoi(portStr)
+	if err != nil || port < 1 || port > 65535 {
+		return nil, fmt.Errorf("PORT must be an integer between 1 and 65535, got %q", portStr)
 	}
-	port = strconv.Itoa(n)
+
+	logFormat := strings.ToLower(strings.TrimSpace(os.Getenv("LOG_FORMAT")))
+	if logFormat == "" {
+		logFormat = "json"
+	}
+	if logFormat != "json" && logFormat != "text" {
+		return nil, fmt.Errorf("LOG_FORMAT must be \"json\" or \"text\", got %q", logFormat)
+	}
 
 	secret := os.Getenv("JWT_SECRET")
 	if len(secret) < 16 {
@@ -67,6 +74,7 @@ func Load() (*Config, error) {
 
 	return &Config{
 		Port:      port,
+		LogFormat: logFormat,
 		JWTSecret: secret,
 		DB: DBConfig{
 			Host:     os.Getenv("DB_HOST"),
