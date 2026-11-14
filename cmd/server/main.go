@@ -40,7 +40,7 @@ func main() {
 	jwtService := service.NewJWTService(cfg.JWTSecret, cfg.AccessTTL)
 
 	authRepo := repository.NewAuthRepository(db)
-	authService := service.NewAuthService(authRepo, jwtService)
+	authService := service.NewAuthService(authRepo, jwtService, cfg.RefreshTTL)
 	authHandle := handle.NewAuthHandle(authService)
 	mw := middleware.NewMiddleware(jwtService, authRepo)
 

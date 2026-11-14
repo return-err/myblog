@@ -27,12 +27,13 @@ type AuthRepositoryInterface interface {
 }
 
 type AuthService struct {
-	repo AuthRepositoryInterface
-	jwt  *JWTService
+	repo       AuthRepositoryInterface
+	jwt        *JWTService
+	refreshTTL time.Duration
 }
 
-func NewAuthService(repo AuthRepositoryInterface, jwt *JWTService) *AuthService {
-	return &AuthService{repo: repo, jwt: jwt}
+func NewAuthService(repo AuthRepositoryInterface, jwt *JWTService, refreshTTL time.Duration) *AuthService {
+	return &AuthService{repo: repo, jwt: jwt, refreshTTL: refreshTTL}
 }
 
 func (s *AuthService) Register(username, password string) error {
@@ -68,7 +69,7 @@ func (s *AuthService) Login(username, password string) (*model.TokenPair, error)
 		return nil, err
 	}
 
-	refreshToken, expiresAt, err := generateRefreshToken()
+	refreshToken, expiresAt, err := generateRefreshToken(s.refreshTTL)
 	if err != nil {
 		return nil, err
 	}
@@ -79,8 +80,9 @@ func (s *AuthService) Login(username, password string) (*model.TokenPair, error)
 	}
 
 	return &model.TokenPair{
-		AccessToken:  accessToken,
-		RefreshToken: refreshToken,
+		AccessToken:      accessToken,
+		RefreshToken:     refreshToken,
+		RefreshExpiresAt: expiresAt,
 	}, nil
 }
 
@@ -116,7 +118,7 @@ func (s *AuthService) Refresh(refreshToken string) (*model.TokenPair, error) {
 		return nil, err
 	}
 
-	newRefreshToken, expiresAt, err := generateRefreshToken()
+	newRefreshToken, expiresAt, err := generateRefreshToken(s.refreshTTL)
 	if err != nil {
 		return nil, err
 	}
@@ -140,14 +142,14 @@ func (s *AuthService) Logout(userID int64) error {
 	return nil
 }
 
-func generateRefreshToken() (string, time.Time, error) {
+func generateRefreshToken(ttl time.Duration) (string, time.Time, error) {
 	bytes := make([]byte, 32)
 	_, err := rand.Read(bytes)
 	if err != nil {
 		return "", time.Now(), fmt.Errorf("failed to create refresh token: %w", err)
 	}
 
-	return hex.EncodeToString(bytes), time.Now().Add(7 * 24 * time.Hour), nil
+	return hex.EncodeToString(bytes), time.Now().Add(ttl), nil
 }
 
 // 正規表現で制限する方法

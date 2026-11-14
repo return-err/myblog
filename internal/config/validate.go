@@ -22,13 +22,13 @@ type AdminConfig struct {
 }
 
 type Config struct {
-	Port      int
-	LogFormat string
-	JWTSecret string
-	DB        DBConfig
-	Admin     AdminConfig
-	AccessTTL time.Duration
-	// RefreshTTL time.Duration
+	Port       int
+	LogFormat  string
+	JWTSecret  string
+	DB         DBConfig
+	Admin      AdminConfig
+	AccessTTL  time.Duration
+	RefreshTTL time.Duration
 }
 
 func Load() (*Config, error) {
@@ -73,16 +73,13 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("JWT_SECRET must not use a default value")
 	}
 
-	accessTTL := 15 * time.Minute
-	if v := strings.TrimSpace(os.Getenv("ACCESS_TOKEN_TTL")); v != "" {
-		d, err := time.ParseDuration(v)
-		if err != nil {
-			return nil, fmt.Errorf("ACCESS_TOKEN_TTL must be a duration like \"15m\", got %q", v)
-		}
-		if d <= 0 {
-			return nil, fmt.Errorf("ACCESS_TOKEN_TTL must be positive, got %q", v)
-		}
-		accessTTL = d
+	accessTTL, err := durationFromEvn("ACCESS_TOKEN_TTL", 15*time.Minute)
+	if err != nil {
+		return nil, err
+	}
+	refreshTTL, err := durationFromEvn("REFRESH_TOKEN_TTL", 7*24*time.Hour)
+	if err != nil {
+		return nil, err
 	}
 
 	return &Config{
@@ -100,6 +97,23 @@ func Load() (*Config, error) {
 			Username: os.Getenv("INITIAL_ADMIN_USER"),
 			Password: os.Getenv("INITIAL_ADMIN_PASS"),
 		},
-		AccessTTL: accessTTL,
+		AccessTTL:  accessTTL,
+		RefreshTTL: refreshTTL,
 	}, nil
+}
+
+func durationFromEvn(key string, def time.Duration) (time.Duration, error) {
+	v := strings.TrimSpace(os.Getenv(key))
+	if v != "" {
+		d, err := time.ParseDuration(v)
+		if err != nil {
+			return 0, fmt.Errorf("%s must be a duration like \"15m\", got %q", key, v)
+		}
+		if d <= 0 {
+			return 0, fmt.Errorf("%s must be positive, got %q", key, v)
+		}
+		return d, nil
+	} else {
+		return def, nil
+	}
 }

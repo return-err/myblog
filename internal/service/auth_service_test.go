@@ -14,6 +14,8 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+const testRefreshTTL = 168 * time.Hour
+
 type mockAuthRepository struct {
 	AuthRepositoryInterface
 
@@ -102,7 +104,7 @@ func TestRegister(t *testing.T) {
 				createUserFn: tt.mockCreateUserFn,
 			}
 			jwtService := NewJWTService("test", testAccessTTL)
-			mockS := NewAuthService(r, jwtService)
+			mockS := NewAuthService(r, jwtService, testRefreshTTL)
 
 			err := mockS.Register(tt.username, tt.password)
 			if !errors.Is(err, tt.wantErr) {
@@ -179,9 +181,12 @@ func TestLogin(t *testing.T) {
 				saveTokenFn: tt.mockSaveTokenFn,
 			}
 			jwtService := NewJWTService("test", testAccessTTL)
-			mockS := NewAuthService(r, jwtService)
+			mockS := NewAuthService(r, jwtService, testRefreshTTL)
 
-			_, err := mockS.Login(tt.username, tt.password)
+			pair, err := mockS.Login(tt.username, tt.password)
+			if tt.wantErr == nil {
+				assert.WithinDuration(t, time.Now().Add(testRefreshTTL), pair.RefreshExpiresAt, 2*time.Second)
+			}
 			if !errors.Is(err, tt.wantErr) {
 				t.Errorf("expected error %v, got %v", tt.wantErr, err)
 			}
@@ -296,7 +301,7 @@ func TestRefresh(t *testing.T) {
 				rotateRefreshTokenFn: tt.rotateRefreshTokenFn,
 			}
 			jwtService := NewJWTService("test", testAccessTTL)
-			mockS := NewAuthService(r, jwtService)
+			mockS := NewAuthService(r, jwtService, testRefreshTTL)
 
 			tokenPair, err := mockS.Refresh(tt.oldRefreshToken)
 

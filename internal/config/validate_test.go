@@ -215,3 +215,59 @@ func TestLoad_AccessTTL(t *testing.T) {
 		})
 	}
 }
+
+func TestLoad_RefreshTTL(t *testing.T) {
+	tests := []struct {
+		name    string
+		value   string
+		wantErr string
+		want    time.Duration
+	}{
+		{
+			name:    "default",
+			value:   "",
+			wantErr: "",
+			want:    168 * time.Hour,
+		},
+		{
+			name:    "seconds",
+			value:   "30s",
+			wantErr: "",
+			want:    30 * time.Second,
+		},
+		{
+			name:    "compound",
+			value:   "1h30m",
+			wantErr: "",
+			want:    90 * time.Minute,
+		},
+		{
+			name:    "no unit",
+			value:   "15",
+			wantErr: "REFRESH_TOKEN_TTL must be a duration like \"15m\", got \"15\"",
+		},
+		{
+			name:    "zero",
+			value:   "0s",
+			wantErr: "REFRESH_TOKEN_TTL must be positive, got \"0s\"",
+		},
+		{
+			name:    "negative",
+			value:   "-5s",
+			wantErr: "REFRESH_TOKEN_TTL must be positive, got \"-5s\"",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			setValidEnv(t)
+			t.Setenv("REFRESH_TOKEN_TTL", tt.value)
+			cfg, err := Load()
+			if tt.wantErr != "" {
+				assert.EqualError(t, err, tt.wantErr)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, cfg.RefreshTTL)
+		})
+	}
+}
