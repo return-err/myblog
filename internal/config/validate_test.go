@@ -2,6 +2,7 @@ package config
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -155,6 +156,62 @@ func TestValidateStartup(t *testing.T) {
 				assert.Equal(t, tt.wantPort, cfg.Port)
 				assert.Equal(t, tt.wantLogFormat, cfg.LogFormat)
 			}
+		})
+	}
+}
+
+func TestLoad_AccessTTL(t *testing.T) {
+	tests := []struct {
+		name    string
+		value   string
+		wantErr string
+		want    time.Duration
+	}{
+		{
+			name:    "default",
+			value:   "",
+			wantErr: "",
+			want:    15 * time.Minute,
+		},
+		{
+			name:    "seconds",
+			value:   "30s",
+			wantErr: "",
+			want:    30 * time.Second,
+		},
+		{
+			name:    "compound",
+			value:   "1h30m",
+			wantErr: "",
+			want:    90 * time.Minute,
+		},
+		{
+			name:    "no unit",
+			value:   "15",
+			wantErr: "ACCESS_TOKEN_TTL must be a duration like \"15m\", got \"15\"",
+		},
+		{
+			name:    "zero",
+			value:   "0s",
+			wantErr: "ACCESS_TOKEN_TTL must be positive, got \"0s\"",
+		},
+		{
+			name:    "negative",
+			value:   "-5s",
+			wantErr: "ACCESS_TOKEN_TTL must be positive, got \"-5s\"",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			setValidEnv(t)
+			t.Setenv("ACCESS_TOKEN_TTL", tt.value)
+			cfg, err := Load()
+			if tt.wantErr != "" {
+				assert.EqualError(t, err, tt.wantErr)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, cfg.AccessTTL)
 		})
 	}
 }

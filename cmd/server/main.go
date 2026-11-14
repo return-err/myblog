@@ -37,7 +37,7 @@ func main() {
 	}
 	defer db.Close()
 
-	jwtService := service.NewJWTService(cfg.JWTSecret)
+	jwtService := service.NewJWTService(cfg.JWTSecret, cfg.AccessTTL)
 
 	authRepo := repository.NewAuthRepository(db)
 	authService := service.NewAuthService(authRepo, jwtService)

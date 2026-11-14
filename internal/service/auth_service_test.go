@@ -101,7 +101,7 @@ func TestRegister(t *testing.T) {
 			r := &mockAuthRepository{
 				createUserFn: tt.mockCreateUserFn,
 			}
-			jwtService := NewJWTService("test")
+			jwtService := NewJWTService("test", testAccessTTL)
 			mockS := NewAuthService(r, jwtService)
 
 			err := mockS.Register(tt.username, tt.password)
@@ -178,7 +178,7 @@ func TestLogin(t *testing.T) {
 				getUserFn:   tt.mockGetUserfn,
 				saveTokenFn: tt.mockSaveTokenFn,
 			}
-			jwtService := NewJWTService("test")
+			jwtService := NewJWTService("test", testAccessTTL)
 			mockS := NewAuthService(r, jwtService)
 
 			_, err := mockS.Login(tt.username, tt.password)
@@ -295,7 +295,7 @@ func TestRefresh(t *testing.T) {
 				getTokenVersionFn:    tt.getTokenVersionFn,
 				rotateRefreshTokenFn: tt.rotateRefreshTokenFn,
 			}
-			jwtService := NewJWTService("test")
+			jwtService := NewJWTService("test", testAccessTTL)
 			mockS := NewAuthService(r, jwtService)
 
 			tokenPair, err := mockS.Refresh(tt.oldRefreshToken)

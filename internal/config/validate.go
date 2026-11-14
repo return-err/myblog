@@ -5,6 +5,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type DBConfig struct {
@@ -25,9 +26,9 @@ type Config struct {
 	LogFormat string
 	JWTSecret string
 	DB        DBConfig
-	// AccessTTL  time.Duration
+	Admin     AdminConfig
+	AccessTTL time.Duration
 	// RefreshTTL time.Duration
-	Admin AdminConfig
 }
 
 func Load() (*Config, error) {
@@ -72,6 +73,18 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("JWT_SECRET must not use a default value")
 	}
 
+	accessTTL := 15 * time.Minute
+	if v := strings.TrimSpace(os.Getenv("ACCESS_TOKEN_TTL")); v != "" {
+		d, err := time.ParseDuration(v)
+		if err != nil {
+			return nil, fmt.Errorf("ACCESS_TOKEN_TTL must be a duration like \"15m\", got %q", v)
+		}
+		if d <= 0 {
+			return nil, fmt.Errorf("ACCESS_TOKEN_TTL must be positive, got %q", v)
+		}
+		accessTTL = d
+	}
+
 	return &Config{
 		Port:      port,
 		LogFormat: logFormat,
@@ -87,5 +100,6 @@ func Load() (*Config, error) {
 			Username: os.Getenv("INITIAL_ADMIN_USER"),
 			Password: os.Getenv("INITIAL_ADMIN_PASS"),
 		},
+		AccessTTL: accessTTL,
 	}, nil
 }
