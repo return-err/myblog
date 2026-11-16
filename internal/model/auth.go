@@ -21,6 +21,8 @@ type Claims struct {
 type TokenPair struct {
 	AccessToken  string
 	RefreshToken string
+	// AccessExpiresAt  time.Time
+	RefreshExpiresAt time.Time
 }
 
 type RefreshToken struct {

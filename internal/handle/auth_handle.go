@@ -2,6 +2,7 @@ package handle
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/return-err/myblog/internal/apperror"
@@ -54,7 +55,7 @@ func (a *AuthHandle) Login(c *gin.Context) {
 		return
 	}
 
-	c.SetCookie("refresh_token", token.RefreshToken, 7*24*3600, "/api/auth/refresh", "", false, true)
+	setRefreshCookie(c, token)
 	c.JSON(http.StatusOK, gin.H{"message": "login successfully", "token": token.AccessToken})
 }
 
@@ -71,7 +72,7 @@ func (a *AuthHandle) Refresh(c *gin.Context) {
 		return
 	}
 
-	c.SetCookie("refresh_token", token.RefreshToken, 7*24*3600, "/api/auth/refresh", "", false, true)
+	setRefreshCookie(c, token)
 	c.JSON(http.StatusOK, gin.H{"token": token.AccessToken})
 }
 
@@ -95,4 +96,9 @@ func (a *AuthHandle) Logout(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "logged out successfully"})
+}
+
+func setRefreshCookie(c *gin.Context, token *model.TokenPair) {
+	maxAge := int(time.Until(token.RefreshExpiresAt).Seconds())
+	c.SetCookie("refresh_token", token.RefreshToken, maxAge, "/api/auth/refresh", "", false, true)
 }

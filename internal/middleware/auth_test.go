@@ -5,11 +5,14 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/return-err/myblog/internal/service"
 	"github.com/stretchr/testify/assert"
 )
+
+const testAccessTTL = 15 * time.Minute
 
 func setupTestRouter(mw gin.HandlerFunc, handler func(c *gin.Context)) *gin.Engine {
 	gin.SetMode(gin.TestMode)
@@ -33,7 +36,7 @@ func (m *mockAuthRepo) GetTokenVersionByUserID(userID int64) (int, error) {
 }
 
 func newTestMiddleware(secret string) *Middleware {
-	jwtService := service.NewJWTService(secret)
+	jwtService := service.NewJWTService(secret, testAccessTTL)
 	var mockRepo mockAuthRepo
 	mw := NewMiddleware(jwtService, &mockRepo)
 	return mw
@@ -115,7 +118,7 @@ func TestAuthMiddleware_InvalidFormat(t *testing.T) {
 
 func TestAuthMiddleware_InvalidToken(t *testing.T) {
 	mw := newTestMiddleware("test")
-	wrongJWTService := service.NewJWTService("wrong")
+	wrongJWTService := service.NewJWTService("wrong", testAccessTTL)
 	tokenString, _ := wrongJWTService.GenerateToken(int64(100), "user", 1)
 	handlerReached := false
 	handler := func(c *gin.Context) {

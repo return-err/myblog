@@ -7,10 +7,14 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/return-err/myblog/internal/model"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
+const testAccessTTL = 15 * time.Minute
+
 func TestGenerateToken_Success(t *testing.T) {
-	jwtService := NewJWTService("test")
+	jwtService := NewJWTService("test", testAccessTTL)
 
 	tokenString, err := jwtService.GenerateToken(int64(100), "admin", 0)
 	if err != nil {
@@ -22,8 +26,21 @@ func TestGenerateToken_Success(t *testing.T) {
 	}
 }
 
+func TestGenerateToken_UsesAccessTTL(t *testing.T) {
+	jwtService := NewJWTService("test", 30*time.Second)
+
+	tokenString, err := jwtService.GenerateToken(int64(100), "admin", 0)
+	require.NoError(t, err)
+
+	claims, err := jwtService.ParseToken(tokenString)
+	require.NoError(t, err)
+
+	// 誤差を許容する
+	assert.WithinDuration(t, time.Now().Add(30*time.Second), claims.ExpiresAt.Time, 2*time.Second)
+}
+
 func TestParseToken_Success(t *testing.T) {
-	jwtService := NewJWTService("test")
+	jwtService := NewJWTService("test", testAccessTTL)
 	tokenString, err := jwtService.GenerateToken(int64(100), "admin", 100)
 	if err != nil {
 		t.Fatalf("expected no err, got %v", err)
@@ -47,10 +64,10 @@ func TestParseToken_Success(t *testing.T) {
 }
 
 func TestParseToken_InvalidSecret(t *testing.T) {
-	jwtService := NewJWTService("correct")
+	jwtService := NewJWTService("correct", testAccessTTL)
 	tokenString, _ := jwtService.GenerateToken(int64(100), "admin", 0)
 
-	wrongService := NewJWTService("wrong")
+	wrongService := NewJWTService("wrong", testAccessTTL)
 	_, err := wrongService.ParseToken(tokenString)
 	if err == nil {
 		t.Error("expected err, got no err")
@@ -65,7 +82,7 @@ func TestParseToken_Expired(t *testing.T) {
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(-1 * time.Hour)),
 		},
 	}
-	jwtService := NewJWTService("test")
+	jwtService := NewJWTService("test", testAccessTTL)
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, expiredClaims)
 	tokenString, _ := token.SignedString([]byte("test"))

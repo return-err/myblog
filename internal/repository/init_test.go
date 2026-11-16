@@ -45,7 +45,7 @@ func TestInitAdmin(t *testing.T) {
 	resetTable(t)
 	defer resetTable(t)
 
-	err := initAdmin(testDB)
+	err := initAdmin(testDB, testAdmin)
 	if err != nil {
 		require.NoError(t, err, "admin 初期化できませんでした")
 	}
@@ -62,10 +62,10 @@ func TestInitAdmin(t *testing.T) {
 
 	assert.Equal(t, "admin", username)
 	assert.Equal(t, "admin", role)
-	err = bcrypt.CompareHashAndPassword([]byte(passwordHash), []byte("admin1234"))
+	err = bcrypt.CompareHashAndPassword([]byte(passwordHash), []byte(testAdmin.Password))
 	assert.NoError(t, err, "パスワードが正しくありません")
 
-	err = initAdmin(testDB)
+	err = initAdmin(testDB, testAdmin)
 	require.NoError(t, err, "二回目の初期化に問題が起きました")
 
 	err = testDB.QueryRow(`SELECT COUNT(*) FROM users WHERE role = 'admin'`).Scan(&count)

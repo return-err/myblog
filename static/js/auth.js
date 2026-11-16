@@ -11,7 +11,7 @@ async function refreshAccessToken() {
         return false;
     }
 
-    localStorage.setItem("token", result.access_token);
+    localStorage.setItem("token", result.token);
     return true;
 }
 

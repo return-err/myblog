@@ -12,7 +12,7 @@ func TestGetUserProfile(t *testing.T) {
 	resetTable(t)
 	defer resetTable(t)
 
-	err := initAdmin(testDB)
+	err := initAdmin(testDB, testAdmin)
 	require.NoError(t, err)
 
 	userRepo := NewUserRepository(testDB)
@@ -131,7 +131,7 @@ func TestUpdateUserProfile(t *testing.T) {
 	defer resetTable(t)
 
 	userRepo := NewUserRepository(testDB)
-	err := initAdmin(testDB)
+	err := initAdmin(testDB, testAdmin)
 	require.NoError(t, err)
 
 	t.Run("create profile", func(t *testing.T) {

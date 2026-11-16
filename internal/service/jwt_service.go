@@ -10,11 +10,15 @@ import (
 )
 
 type JWTService struct {
-	Secret string
+	Secret    string
+	accessTTL time.Duration
 }
 
-func NewJWTService(secret string) *JWTService {
-	return &JWTService{Secret: secret}
+func NewJWTService(secret string, accessTTL time.Duration) *JWTService {
+	return &JWTService{
+		Secret:    secret,
+		accessTTL: accessTTL,
+	}
 }
 
 func (j *JWTService) GenerateToken(userID int64, role string, tokenVersion int) (string, error) {
@@ -23,7 +27,7 @@ func (j *JWTService) GenerateToken(userID int64, role string, tokenVersion int) 
 		TokenVersion: tokenVersion,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Subject:   strconv.FormatInt(userID, 10),
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(15 * time.Minute)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(j.accessTTL)),
 		},
 	}
 

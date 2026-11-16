@@ -14,6 +14,8 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+const testRefreshTTL = 168 * time.Hour
+
 type mockAuthRepository struct {
 	AuthRepositoryInterface
 
@@ -101,8 +103,8 @@ func TestRegister(t *testing.T) {
 			r := &mockAuthRepository{
 				createUserFn: tt.mockCreateUserFn,
 			}
-			jwtService := NewJWTService("test")
-			mockS := NewAuthService(r, jwtService)
+			jwtService := NewJWTService("test", testAccessTTL)
+			mockS := NewAuthService(r, jwtService, testRefreshTTL)
 
 			err := mockS.Register(tt.username, tt.password)
 			if !errors.Is(err, tt.wantErr) {
@@ -171,17 +173,19 @@ func TestLogin(t *testing.T) {
 			wantErr: apperror.ErrInvalidCredentials,
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			r := &mockAuthRepository{
 				getUserFn:   tt.mockGetUserfn,
 				saveTokenFn: tt.mockSaveTokenFn,
 			}
-			jwtService := NewJWTService("test")
-			mockS := NewAuthService(r, jwtService)
+			jwtService := NewJWTService("test", testAccessTTL)
+			mockS := NewAuthService(r, jwtService, testRefreshTTL)
 
-			_, err := mockS.Login(tt.username, tt.password)
+			pair, err := mockS.Login(tt.username, tt.password)
+			if tt.wantErr == nil {
+				assert.WithinDuration(t, time.Now().Add(testRefreshTTL), pair.RefreshExpiresAt, 2*time.Second)
+			}
 			if !errors.Is(err, tt.wantErr) {
 				t.Errorf("expected error %v, got %v", tt.wantErr, err)
 			}
@@ -295,8 +299,8 @@ func TestRefresh(t *testing.T) {
 				getTokenVersionFn:    tt.getTokenVersionFn,
 				rotateRefreshTokenFn: tt.rotateRefreshTokenFn,
 			}
-			jwtService := NewJWTService("test")
-			mockS := NewAuthService(r, jwtService)
+			jwtService := NewJWTService("test", testAccessTTL)
+			mockS := NewAuthService(r, jwtService, testRefreshTTL)
 
 			tokenPair, err := mockS.Refresh(tt.oldRefreshToken)
 
