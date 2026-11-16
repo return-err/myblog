@@ -173,7 +173,6 @@ func TestLogin(t *testing.T) {
 			wantErr: apperror.ErrInvalidCredentials,
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			r := &mockAuthRepository{
