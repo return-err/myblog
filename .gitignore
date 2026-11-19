@@ -16,4 +16,8 @@
 *.sln
 *.swp
 
+certs/
+*.pem
+*.key
+
 .env

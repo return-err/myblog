@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -21,6 +23,9 @@ import (
 
 func main() {
 	godotenv.Load()
+
+	certFile := os.Getenv("TLS_CERT_FILE")
+	keyFile := os.Getenv("TLS_KEY_FILE")
 
 	cfg, err := config.Load()
 	if err != nil {
@@ -56,13 +61,28 @@ func main() {
 	r := router.SetupRouter(authHandle, postHandle, mw, userHandle, healthHandle)
 
 	srv := &http.Server{
-		Addr:              fmt.Sprintf(":%d", cfg.Port),
-		Handler:           r,
+		Addr:    fmt.Sprintf(":%d", cfg.Port),
+		Handler: r,
+		TLSConfig: &tls.Config{
+			MinVersion: tls.VersionTLS12,
+		},
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
 	go func() {
-		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		var err error
+		if certFile == "" || keyFile == "" {
+			if certFile != "" || keyFile != "" {
+				slog.Error("TLS_CERT_FILE and TLS_KEY_FILE must be set together")
+				os.Exit(1)
+			}
+			slog.Warn("TLS not configured, serving plain HTTP")
+			err = srv.ListenAndServe()
+		} else {
+			slog.Warn("serving HTTPS", "addr", srv.Addr)
+			err = srv.ListenAndServeTLS(certFile, keyFile)
+		}
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
 			slog.Error("server listen failed", "err", err)
 			os.Exit(1)
 		}

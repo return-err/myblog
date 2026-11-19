@@ -7,11 +7,13 @@ services:
     restart: unless-stopped
     ports:
       - "8080:8080"
+    volumes:
+      - ./certs:/certs:ro
     depends_on:
       db:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:8080/readyz"]
+      test: ["CMD", "wget", "-qO-", "https://localhost:8080/readyz"]
       interval: 10s
       timeout: 3s
       retries: 3
@@ -25,6 +27,8 @@ services:
       DB_NAME: ${DB_NAME:?}
       INITIAL_ADMIN_USER: ${INITIAL_ADMIN_USER:?}
       INITIAL_ADMIN_PASS: ${INITIAL_ADMIN_PASS:?}
+      TLS_CERT_FILE: /certs/localhost.pem
+      TLS_KEY_FILE: /certs/localhost-key.pem
     mem_limit: 256m
     logging:
       driver: json-file
