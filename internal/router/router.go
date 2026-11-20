@@ -1,6 +1,7 @@
 package router
 
 import (
+	"log/slog"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -14,6 +15,10 @@ func SetupRouter(authHandle *handle.AuthHandle, postHandle *handle.PostHandle, m
 	r.Use(middleware.RequestID())
 	r.Use(middleware.RequestLogger())
 	r.Use(gin.Recovery())
+
+	if err := r.SetTrustedProxies([]string{"172.18.0.4"}); err != nil {
+		slog.Error("failed to set trusted proxies", "error", err)
+	}
 
 	loginLimiter := middleware.NewIPLimiter(rate.Every(10*time.Second), 10)
 
@@ -53,6 +58,14 @@ func SetupRouter(authHandle *handle.AuthHandle, postHandle *handle.PostHandle, m
 
 	r.GET("/healthz", healthHandle.Healthz)
 	r.GET("/readyz", healthHandle.Readyz)
+
+	// test ip router
+	// r.GET("/debug/ip", func(ctx *gin.Context) {
+	// 	ctx.JSON(200, gin.H{
+	// 		"client_ip": ctx.ClientIP(),
+	// 		"proto":     ctx.GetHeader("X-Forwarded-Proto"),
+	// 	})
+	// })
 
 	api := r.Group("/api")
 	{

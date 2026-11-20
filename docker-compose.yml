@@ -76,6 +76,16 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+    networks:
+      default:
+        ipv4_address: 172.18.0.4
+
+
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: 172.18.0.0/16
 
 
 volumes:

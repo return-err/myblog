@@ -100,5 +100,5 @@ func (a *AuthHandle) Logout(c *gin.Context) {
 
 func setRefreshCookie(c *gin.Context, token *model.TokenPair) {
 	maxAge := int(time.Until(token.RefreshExpiresAt).Seconds())
-	c.SetCookie("refresh_token", token.RefreshToken, maxAge, "/api/auth/refresh", "", false, true)
+	c.SetCookie("refresh_token", token.RefreshToken, maxAge, "/api/auth/refresh", "", true, true)
 }
