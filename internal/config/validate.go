@@ -29,6 +29,7 @@ type Config struct {
 	Admin      AdminConfig
 	AccessTTL  time.Duration
 	RefreshTTL time.Duration
+	RedisAddr  string
 }
 
 func Load() (*Config, error) {
@@ -73,11 +74,16 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("JWT_SECRET must not use a default value")
 	}
 
-	accessTTL, err := durationFromEvn("ACCESS_TOKEN_TTL", 15*time.Minute)
+	redisAddr := os.Getenv("REDIS_ADDR")
+	if redisAddr == "" {
+		redisAddr = "localhost:6379"
+	}
+
+	accessTTL, err := durationFromEnv("ACCESS_TOKEN_TTL", 15*time.Minute)
 	if err != nil {
 		return nil, err
 	}
-	refreshTTL, err := durationFromEvn("REFRESH_TOKEN_TTL", 7*24*time.Hour)
+	refreshTTL, err := durationFromEnv("REFRESH_TOKEN_TTL", 7*24*time.Hour)
 	if err != nil {
 		return nil, err
 	}
@@ -99,10 +105,11 @@ func Load() (*Config, error) {
 		},
 		AccessTTL:  accessTTL,
 		RefreshTTL: refreshTTL,
+		RedisAddr:  redisAddr,
 	}, nil
 }
 
-func durationFromEvn(key string, def time.Duration) (time.Duration, error) {
+func durationFromEnv(key string, def time.Duration) (time.Duration, error) {
 	v := strings.TrimSpace(os.Getenv(key))
 	if v != "" {
 		d, err := time.ParseDuration(v)

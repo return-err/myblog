@@ -89,7 +89,7 @@ func TestMain(m *testing.M) {
 	}
 	teardown()
 
-	os.Exit(code) //os.Exit は defer を執行しない！
+	os.Exit(code) // os.Exit は defer を執行しない
 }
 
 func resetTable(t *testing.T) {
