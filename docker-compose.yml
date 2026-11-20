@@ -5,8 +5,10 @@ services:
       dockerfile: Dockerfile
     # container_name: myblog-app
     restart: unless-stopped
-    ports:
-      - "8080:8080"
+    expose:
+      - "8080"
+    # ports:
+    #   - "8080:8080"
     depends_on:
       db:
         condition: service_healthy
@@ -56,6 +58,37 @@ services:
         max-size: "10m"
         max-file: "3"
 
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      app:
+        condition: service_healthy
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      default:
+        ipv4_address: 172.18.0.4
+
+
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: 172.18.0.0/16
+
 
 volumes:
   pgdata:
+  caddy_data:
+  caddy_config:
