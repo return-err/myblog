@@ -55,7 +55,8 @@ func main() {
 	mw := middleware.NewMiddleware(jwtService, authRepo)
 
 	postRepo := repository.NewPostRepository(db)
-	postService := service.NewPostService(postRepo)
+	cachedPostRepo := repository.NewCachedPostRepository(postRepo, rdb)
+	postService := service.NewPostService(cachedPostRepo)
 	postHandle := handle.NewPostHandle(postService)
 
 	userRepo := repository.NewUserRepository(db)
