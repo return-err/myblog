@@ -16,7 +16,7 @@ func SetupRouter(authHandle *handle.AuthHandle, postHandle *handle.PostHandle, m
 	r.Use(middleware.RequestLogger())
 	r.Use(gin.Recovery())
 
-	if err := r.SetTrustedProxies([]string{"172.18.0.4"}); err != nil {
+	if err := r.SetTrustedProxies([]string{"172.18.0.0/16"}); err != nil {
 		slog.Error("failed to set trusted proxies", "error", err)
 	}
 

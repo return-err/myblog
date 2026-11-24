@@ -81,7 +81,7 @@ services:
         max-file: "3"
     networks:
       default:
-        ipv4_address: 172.18.0.4
+        # ipv4_address: 172.18.0.4
       
   redis:
     image: redis:7
