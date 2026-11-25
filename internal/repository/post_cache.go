@@ -25,17 +25,18 @@ func NewCachedPostRepository(repo *PostRepository, rdb *redis.Client) *CachedPos
 }
 
 func (c *CachedPostRepository) GetPostDetail(postID int64) (model.PostDetail, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
-	defer cancel()
+	key := postKey(postID)
 
-	data, err := c.rdb.Get(ctx, postKey(postID)).Bytes()
+	getCtx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+	data, err := c.rdb.Get(getCtx, key).Bytes()
+	cancel()
 	if err == nil {
 		var cached model.PostDetail
 		if json.Unmarshal(data, &cached) == nil {
 			return cached, nil
 		}
 	} else if err != redis.Nil {
-		slog.Warn("redis get failed", "key", postKey(postID), "err", err)
+		slog.Warn("redis get failed", "key", key, "err", err)
 	}
 
 	p, err := c.PostRepository.GetPostDetail(postID)
@@ -43,9 +44,11 @@ func (c *CachedPostRepository) GetPostDetail(postID int64) (model.PostDetail, er
 		return model.PostDetail{}, err
 	}
 
-	if b, err := json.Marshal(p); err != nil {
-		if err := c.rdb.Set(ctx, postKey(postID), b, 5*time.Minute).Err(); err != nil {
-			slog.Warn("redis set failed", "key", postKey(postID), "err", err)
+	setCtx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+	defer cancel()
+	if b, err := json.Marshal(p); err == nil {
+		if err := c.rdb.Set(setCtx, postKey(postID), b, 5*time.Minute).Err(); err != nil {
+			slog.Warn("redis set failed", "key", key, "err", err)
 		}
 	}
 
