@@ -163,5 +163,29 @@ func TestCachedDeletePost_InvalidatesCache(t *testing.T) {
 }
 
 func TestCachedGetPostDetail_FallsBackWhenRedisDown(t *testing.T) {
+	resetTable(t)
+	defer resetTable(t)
 
+	rdb := redis.NewClient(&redis.Options{Addr: "localhost:1"})
+	t.Cleanup(func() { rdb.Close() })
+	repo := NewPostRepository(testDB)
+	cached := NewCachedPostRepository(repo, rdb)
+
+	if err := seedUser(t); err != nil {
+		t.Fatal(err)
+	}
+	if err := seedPost(t, "title"); err != nil {
+		t.Fatal(err)
+	}
+
+	post, err := cached.GetPostDetail(1)
+	require.NoError(t, err)
+	assert.Equal(t, "title", post.Title)
+
+	err = cached.EditPost(1, "edited_title", "")
+	require.NoError(t, err)
+
+	fromDB, err := repo.GetPostDetail(1)
+	require.NoError(t, err)
+	assert.Equal(t, "edited_title", fromDB.Title)
 }
