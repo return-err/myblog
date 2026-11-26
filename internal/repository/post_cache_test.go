@@ -97,3 +97,35 @@ func TestCachedGetPostDetail_ReturnsCachedValue(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "test_before", post.Title)
 }
+
+func TestCachedEditPost_InvalidatesCache(t *testing.T) {
+	resetTable(t)
+	defer resetTable(t)
+
+	rdb := setupRedis(t)
+	repo := NewPostRepository(testDB)
+	cached := NewCachedPostRepository(repo, rdb)
+
+	if err := seedUser(t); err != nil {
+		t.Fatal(err)
+	}
+	if err := seedPost(t, "title"); err != nil {
+		t.Fatal(err)
+	}
+	post, err := cached.GetPostDetail(1)
+	require.NoError(t, err)
+	n, err := rdb.Exists(context.Background(), "post:1").Result()
+	require.NoError(t, err)
+	require.Equal(t, int64(1), n)
+
+	err = cached.EditPost(1, "edited_title", "edited_context")
+	require.NoError(t, err)
+
+	n, err = rdb.Exists(context.Background(), "post:1").Result()
+	require.NoError(t, err)
+	require.Equal(t, int64(0), n)
+
+	post, err = cached.GetPostDetail(1)
+	require.NoError(t, err)
+	assert.Equal(t, "edited_title", post.Title)
+}

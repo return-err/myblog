@@ -97,3 +97,25 @@ func resetTable(t *testing.T) {
 	_, err := testDB.Exec("TRUNCATE TABLE user_profiles, users, posts, refresh_tokens RESTART IDENTITY CASCADE;")
 	require.NoError(t, err, "リセットできませんでした")
 }
+
+func seedUser(t *testing.T) error {
+	t.Helper()
+	query := `
+		INSERT INTO users (id, username, password_hash)
+		VALUES (1, 'test_user', 'hashed_pass')
+	`
+
+	_, err := testDB.Exec(query)
+	return err
+}
+
+func seedPost(t *testing.T, title string) error {
+	t.Helper()
+	query := `
+		INSERT INTO posts (id, title, content, user_id)
+		VALUES (1, $1, 'this is a test', 1)
+	`
+
+	_, err := testDB.Exec(query, title)
+	return err
+}
