@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/joho/godotenv"
+	"github.com/return-err/myblog/internal/cache"
 	"github.com/return-err/myblog/internal/config"
 	"github.com/return-err/myblog/internal/handle"
 	"github.com/return-err/myblog/internal/middleware"
@@ -30,12 +31,21 @@ func main() {
 
 	setupLogger(cfg.LogFormat)
 
+	ctx := context.Background()
+
 	db, err := repository.InitAPP(cfg)
 	if err != nil {
 		slog.Error("failed to initialize database", "err", err)
 		os.Exit(1)
 	}
 	defer db.Close()
+
+	rdb, err := cache.NewRedisClient(ctx, cfg.RedisAddr)
+	if err != nil {
+		slog.Error("failed to initialize redis", "err", err)
+		os.Exit(1)
+	}
+	defer rdb.Close()
 
 	jwtService := service.NewJWTService(cfg.JWTSecret, cfg.AccessTTL)
 
@@ -45,7 +55,8 @@ func main() {
 	mw := middleware.NewMiddleware(jwtService, authRepo)
 
 	postRepo := repository.NewPostRepository(db)
-	postService := service.NewPostService(postRepo)
+	cachedPostRepo := repository.NewCachedPostRepository(postRepo, rdb)
+	postService := service.NewPostService(cachedPostRepo)
 	postHandle := handle.NewPostHandle(postService)
 
 	userRepo := repository.NewUserRepository(db)
@@ -73,9 +84,9 @@ func main() {
 	<-quit
 	slog.Info("shutting down")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	if err := srv.Shutdown(ctx); err != nil {
+	if err := srv.Shutdown(shutdownCtx); err != nil {
 		slog.Error("forced server shutdown", "err", err)
 	}
 	slog.Info("Exited")

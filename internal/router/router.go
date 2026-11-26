@@ -16,7 +16,7 @@ func SetupRouter(authHandle *handle.AuthHandle, postHandle *handle.PostHandle, m
 	r.Use(middleware.RequestLogger())
 	r.Use(gin.Recovery())
 
-	if err := r.SetTrustedProxies([]string{"172.18.0.4"}); err != nil {
+	if err := r.SetTrustedProxies([]string{"172.18.0.0/16"}); err != nil {
 		slog.Error("failed to set trusted proxies", "error", err)
 	}
 
@@ -62,8 +62,10 @@ func SetupRouter(authHandle *handle.AuthHandle, postHandle *handle.PostHandle, m
 	// test ip router
 	// r.GET("/debug/ip", func(ctx *gin.Context) {
 	// 	ctx.JSON(200, gin.H{
-	// 		"client_ip": ctx.ClientIP(),
-	// 		"proto":     ctx.GetHeader("X-Forwarded-Proto"),
+	// 		"remote_addr": ctx.Request.RemoteAddr,
+	// 		"xff":         ctx.GetHeader("X-Forwarded-FOR"),
+	// 		"client_ip":   ctx.ClientIP(),
+	// 		"proto":       ctx.GetHeader("X-Forwarded-Proto"),
 	// 	})
 	// })
 
