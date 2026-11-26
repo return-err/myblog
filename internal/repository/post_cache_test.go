@@ -64,3 +64,36 @@ func TestCachedGetPostDetail_WritesCache(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, int64(1), n)
 }
+
+func TestCachedGetPostDetail_ReturnsCachedValue(t *testing.T) {
+	resetTable(t)
+	defer resetTable(t)
+
+	rdb := setupRedis(t)
+	repo := NewPostRepository(testDB)
+	cached := NewCachedPostRepository(repo, rdb)
+
+	err := initAdmin(testDB, config.AdminConfig{Username: "", Password: ""})
+	require.NoError(t, err)
+	insertSQL := `
+		INSERT INTO posts (user_id, title, content)
+		VALUES ($1, $2, $3)
+	`
+
+	_, err = testDB.Exec(insertSQL, 1, "test_before", "this is a test")
+	require.NoError(t, err)
+
+	post, err := cached.GetPostDetail(1)
+	require.NoError(t, err)
+	assert.Equal(t, "test_before", post.Title)
+	err = repo.EditPost(1, "test_after", "this is a test")
+	require.NoError(t, err)
+
+	fromDB, err := repo.GetPostDetail(1)
+	require.NoError(t, err)
+	assert.Equal(t, "test_after", fromDB.Title)
+
+	post, err = cached.GetPostDetail(1)
+	require.NoError(t, err)
+	assert.Equal(t, "test_before", post.Title)
+}
