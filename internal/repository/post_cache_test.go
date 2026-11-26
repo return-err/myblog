@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/redis/go-redis/v9"
+	"github.com/return-err/myblog/internal/apperror"
 	"github.com/return-err/myblog/internal/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -128,4 +129,39 @@ func TestCachedEditPost_InvalidatesCache(t *testing.T) {
 	post, err = cached.GetPostDetail(1)
 	require.NoError(t, err)
 	assert.Equal(t, "edited_title", post.Title)
+}
+
+func TestCachedDeletePost_InvalidatesCache(t *testing.T) {
+	resetTable(t)
+	defer resetTable(t)
+
+	rdb := setupRedis(t)
+	repo := NewPostRepository(testDB)
+	cached := NewCachedPostRepository(repo, rdb)
+
+	if err := seedUser(t); err != nil {
+		t.Fatal(err)
+	}
+	if err := seedPost(t, "title"); err != nil {
+		t.Fatal(err)
+	}
+	_, err := cached.GetPostDetail(1)
+	require.NoError(t, err)
+	n, err := rdb.Exists(context.Background(), "post:1").Result()
+	require.NoError(t, err)
+	require.Equal(t, int64(1), n)
+
+	err = cached.DeletePost(1)
+	require.NoError(t, err)
+
+	n, err = rdb.Exists(context.Background(), "post:1").Result()
+	require.NoError(t, err)
+	require.Equal(t, int64(0), n)
+
+	_, err = cached.GetPostDetail(1)
+	assert.ErrorIs(t, err, apperror.ErrPostNotFound)
+}
+
+func TestCachedGetPostDetail_FallsBackWhenRedisDown(t *testing.T) {
+
 }
