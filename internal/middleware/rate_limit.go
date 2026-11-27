@@ -9,6 +9,10 @@ import (
 	"golang.org/x/time/rate"
 )
 
+type Limiter interface {
+	Allow(key string) bool
+}
+
 type IPLimiter struct {
 	mu      sync.Mutex
 	limiter map[string]*rate.Limiter
@@ -42,7 +46,7 @@ func (u *IPLimiter) Allow(ip string) bool {
 	return limiter.Allow()
 }
 
-func LoginRateLimit(limiter *IPLimiter) gin.HandlerFunc {
+func LoginRateLimit(limiter Limiter) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		ip := ctx.ClientIP()
 		if !limiter.Allow(ip) {
