@@ -55,18 +55,18 @@ func setupTestDB(ctx context.Context) (func(), *config.Config, error) {
 	os.Setenv("DB_NAME", "testdb")
 
 	return func() {
-			if err := pgContainer.Terminate(ctx); err != nil {
-				log.Fatalf("クリアできませんでした: %v", err)
-			}
-		}, &config.Config{
-			DB: config.DBConfig{
-				Host:     os.Getenv("DB_HOST"),
-				Port:     os.Getenv("DB_PORT"),
-				User:     os.Getenv("DB_USER"),
-				Password: os.Getenv("DB_PASSWORD"),
-				Name:     os.Getenv("DB_NAME"),
-			},
-		}, nil
+		if err := pgContainer.Terminate(ctx); err != nil {
+			log.Fatalf("クリアできませんでした: %v", err)
+		}
+	}, &config.Config{
+		DB: config.DBConfig{
+			Host:     os.Getenv("DB_HOST"),
+			Port:     os.Getenv("DB_PORT"),
+			User:     os.Getenv("DB_USER"),
+			Password: os.Getenv("DB_PASSWORD"),
+			Name:     os.Getenv("DB_NAME"),
+		},
+	}, nil
 }
 
 func TestMain(m *testing.M) {
