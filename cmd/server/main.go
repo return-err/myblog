@@ -64,7 +64,7 @@ func main() {
 	userHandle := handle.NewUserHandle(userService)
 
 	healthHandle := handle.NewHealthHandle(postRepo)
-	r := router.SetupRouter(authHandle, postHandle, mw, userHandle, healthHandle)
+	r := router.SetupRouter(authHandle, postHandle, mw, userHandle, healthHandle, rdb)
 
 	srv := &http.Server{
 		Addr:              fmt.Sprintf(":%d", cfg.Port),
